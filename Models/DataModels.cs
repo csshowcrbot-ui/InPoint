@@ -20,7 +20,7 @@ public class Guest
     public string Organization { get; set; } = string.Empty;
     public string Title { get; set; } = string.Empty;
     /// <summary>
-    /// 職級權重：數字愈小排序愈高 (1=院長/局長/特級貴賓, 2=副院長/民代/督導, 3=科部主任/專家/學者/講師, 4=一般貴賓/同仁)
+    /// 職級權重：數字愈小排序愈高 (1=院長/局長/特級貴賓, 2=副院長/民代/照專督導, 3=科部主任/專家/學者/講師, 4=一般貴賓/同仁)
     /// </summary>
     public int RankWeight { get; set; } = 3;
     public string TableNo { get; set; } = string.Empty;

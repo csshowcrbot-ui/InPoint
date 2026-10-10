@@ -911,7 +911,7 @@ Func<string, IEventService, Task<IResult>> handleKioskFeed = async (id, service)
             g.CheckedInAt,
             g.CheckedInBy,
             vipCategory = g.RankWeight == 1 ? "VIP-1 院長/局長" :
-                          g.RankWeight == 2 ? "VIP-2 副院長/民代" :
+                          g.RankWeight == 2 ? "VIP-2 副院長/民代/照專督導" :
                           g.RankWeight == 3 ? "科部主任/教授" : "一般貴賓/同仁"
         })
         .ToList();

@@ -515,7 +515,7 @@ public class SqlEventService : IEventService
             var rankDesc = g.RankWeight switch
             {
                 1 => "1-特級長官/院長",
-                2 => "2-副院長/民代",
+                2 => "2-副院長/民代/照專督導",
                 3 => "3-科部主任/專家",
                 _ => "4-一般貴賓"
             };
@@ -552,7 +552,7 @@ public class SqlEventService : IEventService
             {
                 rank = 1;
             }
-            else if (title.Contains("副院長") || title.Contains("議員") || title.Contains("立委") || title.Contains("代表") || title.Contains("組長") || title.Contains("督導"))
+            else if (title.Contains("副院長") || title.Contains("議員") || title.Contains("立委") || title.Contains("代表") || title.Contains("組長") || title.Contains("督導") || title.Contains("照專"))
             {
                 rank = 2;
             }
