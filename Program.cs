@@ -1318,15 +1318,15 @@ app.MapPost("/api/events/toggle-checkin", async (ToggleCheckInDirectRequest req,
 
 app.MapGet("/api/events/{id}/export", async (string id, HttpContext ctx, IEventService service) =>
 {
-    var session = GetSessionFromContext(ctx);
-    if (session == null && !CheckAdminAuth(ctx))
+    var ev = await service.GetEventByIdAsync(id);
+    if (ev == null)
     {
-        return Results.Unauthorized();
+        return Results.NotFound(new { message = "找不到該活動場次" });
     }
 
     var csvData = await service.ExportCsvAsync(id);
-    var ev = await service.GetEventByIdAsync(id);
-    var safeFileName = $"活動報到名冊_{DateTime.Now:yyyyMMdd_HHmm}.csv";
+    var safeEventName = string.IsNullOrWhiteSpace(ev.EventName) ? "InPoint" : ev.EventName.Replace(" ", "_");
+    var safeFileName = $"活動報到名冊_{safeEventName}_{DateTime.Now:yyyyMMdd_HHmm}.csv";
 
     var preamble = System.Text.Encoding.UTF8.GetPreamble();
     var bytes = System.Text.Encoding.UTF8.GetBytes(csvData);
