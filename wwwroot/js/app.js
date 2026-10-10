@@ -37,6 +37,10 @@ class CheckInApp {
         // VIP Host Announcements
         this.announcedGuests = new Set();
 
+        // 姓名遮蔽控制 (預設開啟遮蔽防護，支援隨時開關 toggle)
+        const savedMask = localStorage.getItem('inpoint_name_masked');
+        this.isNameMasked = savedMask !== null ? savedMask === 'true' : true;
+
         this.init();
     }
 
@@ -1290,10 +1294,64 @@ class CheckInApp {
     }
 
     renderAllViews() {
+        this.updateNameMaskToggleButtons();
         this.renderStatsStrip();
         this.renderStaffGuests();
         this.renderHostView();
         this.renderAdminSpecs();
+    }
+
+    /**
+     * 姓名資訊遮蔽處理函式
+     * 2字: 張*
+     * 3字: 張*宇
+     * 4字: 馬**翰
+     * 5字以上: 第一個字+*+最後一個字
+     */
+    maskName(name) {
+        if (!name || typeof name !== 'string') return name || '';
+        if (!this.isNameMasked) return name;
+
+        const str = name.trim();
+        if (str.length <= 1) return str;
+        if (str.length === 2) {
+            return str[0] + '*';
+        }
+        if (str.length === 3) {
+            return str[0] + '*' + str[2];
+        }
+        if (str.length === 4) {
+            return str[0] + '**' + str[3];
+        }
+        return str[0] + '*'.repeat(str.length - 2) + str[str.length - 1];
+    }
+
+    toggleNameMask() {
+        this.isNameMasked = !this.isNameMasked;
+        localStorage.setItem('inpoint_name_masked', this.isNameMasked ? 'true' : 'false');
+        this.updateNameMaskToggleButtons();
+        this.renderAllViews();
+
+        if (this.isNameMasked) {
+            this.showToast('🔒 姓名資訊已進行安全遮蔽防護！', 'info');
+        } else {
+            this.showToast('👁️ 姓名資訊已切換為完整顯示', 'info');
+        }
+    }
+
+    updateNameMaskToggleButtons() {
+        const btns = document.querySelectorAll('.btn-name-mask-toggle');
+        btns.forEach(btn => {
+            if (this.isNameMasked) {
+                btn.classList.add('is-masked');
+                btn.innerHTML = '<span>🔒 姓名遮蔽：開啟</span>';
+                btn.title = '點擊關閉遮蔽（顯示全名）';
+            } else {
+                btn.classList.remove('is-masked');
+                btn.innerHTML = '<span>👁️ 顯示全名</span>';
+                btn.title = '點擊開啟姓名遮蔽（安全防護）';
+            }
+        });
     }
 
     renderStatsStrip() {
@@ -1469,13 +1527,13 @@ class CheckInApp {
                 ? `<button type="button" class="btn-checkin-toggle is-checked" onclick="app.toggleCheckIn('${g.guestId}', false)" title="點擊可撤回報到">✓ 已報到 (點擊撤回)</button>`
                 : `<button type="button" class="btn-checkin-toggle is-pending" onclick="app.toggleCheckIn('${g.guestId}', true)" title="點擊進行一鍵報到">⚡ 點擊報到</button>`;
 
-            const deleteBtnHtml = `<button type="button" class="btn-card-delete" onclick="app.showDeleteGuestModal('${g.guestId}', '${this.escapeHtml(g.name)}')" title="刪除此貴賓">🗑️</button>`;
+            const deleteBtnHtml = `<button type="button" class="btn-card-delete" onclick="app.showDeleteGuestModal('${g.guestId}', '${this.escapeHtml(this.maskName(g.name))}')" title="刪除此貴賓">🗑️</button>`;
 
             return `
               <div class="guest-card ${g.isCheckedIn ? 'is-checked-in' : ''}" data-guest-id="${g.guestId}">
                 <div class="guest-card-header">
                   <div class="guest-name-badge-group">
-                    <span class="guest-name">${this.escapeHtml(g.name)}</span>
+                    <span class="guest-name">${this.escapeHtml(this.maskName(g.name))}</span>
                     ${rankBadgeHtml}
                   </div>
                   ${tableBadgeHtml}
@@ -1537,7 +1595,7 @@ class CheckInApp {
         const isCurrentlyAnnounced = this.announcedGuests.has(guestId);
         const targetStatus = forceStatus !== null ? forceStatus : !isCurrentlyAnnounced;
         const guest = this.guests.find(g => g.guestId === guestId);
-        const guestDisplayName = guest ? `【${guest.title ? guest.title + ' ' : ''}${guest.name}】` : '長官';
+        const guestDisplayName = guest ? `【${guest.title ? guest.title + ' ' : ''}${this.maskName(guest.name)}】` : '長官';
 
         if (targetStatus) {
             this.announcedGuests.add(guestId);
@@ -1718,13 +1776,13 @@ class CheckInApp {
 
                     let speechCue = `🎙️ 提詞建議：長官已到場就座，可請貴賓準備致詞或引言。`;
                     if (isAnnounced) {
-                        speechCue = `🎙️ 提詞備註：【${this.escapeHtml(g.title)} ${this.escapeHtml(g.name)}】已完成現場唱名致意，現於席位【${this.escapeHtml(g.tableNo || '貴賓席')}】就座。`;
+                        speechCue = `🎙️ 提詞備註：【${this.escapeHtml(g.title)} ${this.escapeHtml(this.maskName(g.name))}】已完成現場唱名致意，現於席位【${this.escapeHtml(g.tableNo || '貴賓席')}】就座。`;
                     } else if (rank === 1) {
-                        speechCue = `🎙️ 致詞提詞：【${this.escapeHtml(g.title)} ${this.escapeHtml(g.name)}】已就席長官主桌，可安排大會開場致詞。`;
+                        speechCue = `🎙️ 致詞提詞：【${this.escapeHtml(g.title)} ${this.escapeHtml(this.maskName(g.name))}】已就席長官主桌，可安排大會開場致詞。`;
                     } else if (rank === 2) {
-                        speechCue = `🎙️ 致詞提詞：【${this.escapeHtml(g.title)} ${this.escapeHtml(g.name)}】已到場，可安排貴賓致詞引言或座談指導。`;
+                        speechCue = `🎙️ 致詞提詞：【${this.escapeHtml(g.title)} ${this.escapeHtml(this.maskName(g.name))}】已到場，可安排貴賓致詞引言或座談指導。`;
                     } else if (rank === 3) {
-                        speechCue = `🎙️ 接待提詞：【${this.escapeHtml(g.title)} ${this.escapeHtml(g.name)}】已就席【${this.escapeHtml(g.tableNo || '貴賓席')}】。`;
+                        speechCue = `🎙️ 接待提詞：【${this.escapeHtml(g.title)} ${this.escapeHtml(this.maskName(g.name))}】已就席【${this.escapeHtml(g.tableNo || '貴賓席')}】。`;
                     }
 
                     const staffBadge = g.checkedInBy ? `<span style="font-size:11.5px; color:#64748B;">經手：${this.escapeHtml(g.checkedInBy)}</span>` : '';
@@ -1758,7 +1816,7 @@ class CheckInApp {
                           <div class="host-vip-header-left">
                             <span class="host-vip-badge ${vipClass}">${badgeText}</span>
                             <div class="host-vip-name-row">
-                              <span class="host-vip-name">${this.escapeHtml(g.name)}</span>
+                              <span class="host-vip-name">${this.escapeHtml(this.maskName(g.name))}</span>
                               <span class="host-vip-role-tag">${this.escapeHtml(g.title)}</span>
                               <span class="host-vip-org-badge">【${this.escapeHtml(g.organization)}】</span>
                             </div>
@@ -1803,7 +1861,7 @@ class CheckInApp {
                           <div class="host-vip-header-left">
                             <span class="host-vip-badge ${vipClass}">${badgeText}</span>
                             <div class="host-vip-name-row">
-                              <span class="host-vip-name">${this.escapeHtml(g.name)}</span>
+                              <span class="host-vip-name">${this.escapeHtml(this.maskName(g.name))}</span>
                               <span class="host-vip-role-tag">${this.escapeHtml(g.title)}</span>
                               <span class="host-vip-org-badge">【${this.escapeHtml(g.organization)}】</span>
                             </div>
@@ -1940,7 +1998,7 @@ class CheckInApp {
           <div>
             <div style="font-size: 11px; font-weight: 800; color: #B45309; text-transform: uppercase;">VIP 尊榮長官抵達！</div>
             <div style="font-size: 16px; font-weight: 900; color: var(--text-charcoal); margin: 2px 0;">
-              【${this.escapeHtml(guest.organization)}】${this.escapeHtml(guest.title)} ${this.escapeHtml(guest.name)}
+              【${this.escapeHtml(guest.organization)}】${this.escapeHtml(guest.title)} ${this.escapeHtml(this.maskName(guest.name))}
             </div>
             <div style="font-size: 12px; color: var(--text-muted);">安排席位：<strong>${this.escapeHtml(guest.tableNo)}</strong> ‧ 請引導人員就位</div>
           </div>
@@ -2196,7 +2254,7 @@ class CheckInApp {
         const desc = document.getElementById('qrModalGuestDesc');
         const qrContainer = document.getElementById('qrCodeSvgContainer');
 
-        if (title) title.innerText = `【${guest.name}】專屬報到 QR`;
+        if (title) title.innerText = `【${this.maskName(guest.name)}】專屬報到 QR`;
         if (desc) desc.innerText = `編號：${guest.guestId} ‧ 桌次：${guest.tableNo}`;
 
         if (qrContainer && window.QRCode) {
@@ -2260,7 +2318,7 @@ class CheckInApp {
         if (pending) {
             this.toggleCheckIn(pending.guestId, true);
             this.closeScannerModal();
-            this.showToast(`📸 模擬掃描成功：【${pending.name}】已完成報到！`, 'success');
+            this.showToast(`📸 模擬掃描成功：【${this.maskName(pending.name)}】已完成報到！`, 'success');
         } else {
             alert('名單中已無未報到之貴賓！');
         }

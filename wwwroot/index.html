@@ -95,6 +95,9 @@
           <div class="live-beacon" id="liveBeaconStatus" title="跨裝置即時同步連線中">
             <span class="beacon-dot"></span> <span class="beacon-label">即時同步</span>
           </div>
+          <button type="button" class="btn-name-mask-toggle is-masked" onclick="app.toggleNameMask()" title="姓名遮蔽切換（點擊切換開啟/關閉）">
+            <span>🔒 姓名遮蔽：開啟</span>
+          </button>
           <button class="btn-icon" id="soundToggleBtn" title="音效開關 (目前開啟)">🔊</button>
         </div>
       </div>
@@ -231,6 +234,9 @@
         </div>
 
         <div class="toolbar-actions-group">
+          <button type="button" class="btn-name-mask-toggle is-masked" onclick="app.toggleNameMask()" title="姓名遮蔽切換（點擊切換開啟/關閉）">
+            <span>🔒 姓名遮蔽：開啟</span>
+          </button>
           <button class="btn btn-excel-import" onclick="app.showImportExcelModal()" title="批次匯入 Excel / CSV 名冊">
             <span>📊 一鍵匯入 Excel</span>
           </button>
