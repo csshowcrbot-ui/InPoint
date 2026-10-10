@@ -1351,12 +1351,6 @@ app.MapPost("/api/ai/parse-guests", async (AiParseRequest req, HttpContext ctx, 
 
 app.MapPost("/api/ai/query-status", async (AiQueryRequest req, HttpContext ctx, IEventService service) =>
 {
-    var session = GetSessionFromContext(ctx);
-    if (session == null && !CheckAdminAuth(ctx))
-    {
-        return Results.Unauthorized();
-    }
-
     var responseText = await service.ProcessAiQueryAsync(req.EventId, req.Query);
     return Results.Ok(new { reply = responseText });
 });
@@ -1524,3 +1518,5 @@ app.MapPost("/api/events/{id}/self-checkin", async (string id, SelfCheckInReques
 });
 
 app.Run();
+
+public record AiQueryRequest(string EventId, string Query);
