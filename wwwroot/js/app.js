@@ -1433,7 +1433,7 @@ class CheckInApp {
         } else if (this.activeFilter === 'pending') {
             filtered = filtered.filter(g => !g.isCheckedIn);
         } else if (this.activeFilter === 'vip') {
-            filtered = filtered.filter(g => g.rankWeight <= 2 || (g.title && (g.title.includes('院長') || g.title.includes('局長') || g.title.includes('部長') || g.title.includes('副院長') || g.title.includes('民代') || g.title.includes('特級') || g.title.includes('VIP'))));
+            filtered = filtered.filter(g => getGuestRank(g) <= 2);
         }
 
         // 2. Filter by search query
@@ -1473,13 +1473,13 @@ class CheckInApp {
         if (emptyBox) emptyBox.style.display = 'none';
 
         grid.innerHTML = filtered.map(g => {
-            // 1. Rank Badge matching screenshot
             let rankBadgeHtml = '';
-            if (g.rankWeight === 1 || (g.title && (g.title.includes('院長') || g.title.includes('局長') || g.title.includes('部長') || g.title.includes('董事長') || g.title.includes('署長')))) {
+            const rank = getGuestRank(g);
+            if (rank === 1) {
                 rankBadgeHtml = `<span class="rank-badge rank-vip-1">🏅 院長/局長 (VIP-1)</span>`;
-            } else if (g.rankWeight === 2 || (g.title && (g.title.includes('副院長') || g.title.includes('民代') || g.title.includes('議員') || g.title.includes('副局長')))) {
-                rankBadgeHtml = `<span class="rank-badge rank-vip-2">🏅 副院長/民代 (VIP-2)</span>`;
-            } else if (g.rankWeight === 3 || (g.title && (g.title.includes('主任') || g.title.includes('教授') || g.title.includes('科長') || g.title.includes('處長') || g.title.includes('醫檢師')))) {
+            } else if (rank === 2) {
+                rankBadgeHtml = `<span class="rank-badge rank-vip-2">🏅 副院長/民代/督導 (VIP-2)</span>`;
+            } else if (rank === 3) {
                 rankBadgeHtml = `<span class="rank-badge rank-vip-3">🏅 科部主任/教授</span>`;
             } else {
                 rankBadgeHtml = `<span class="rank-badge rank-general">嘉賓同仁</span>`;
@@ -1698,9 +1698,10 @@ class CheckInApp {
         }
 
         const getGuestRank = (g) => {
+            const title = (g.title || '').trim();
+            if (title.includes('照專') && !title.includes('督導')) return 4;
             let r = parseInt(g.rankWeight !== undefined ? g.rankWeight : (g.RankWeight !== undefined ? g.RankWeight : null), 10);
             if (!isNaN(r) && r >= 1 && r <= 4) return r;
-            const title = (g.title || '').trim();
             if (/院長|局長|部長|署長|董事長|總裁|副部長|校長/.test(title)) return 1;
             if (/副院長|副局長|議員|立委|代表|組長|科長|副署長|委員|督導/.test(title)) return 2;
             if (/主任|教授|醫師|處長|顧問|隊長|副主任|總監|學者|專家|講師/.test(title)) return 3;
@@ -2115,7 +2116,8 @@ class CheckInApp {
             const phone = phoneCol !== -1 ? String(row[phoneCol] || '').trim() : '';
 
             let rankWeight = 3;
-            if (/院長|局長|部長|署長|董事長|總裁/.test(title)) rankWeight = 1;
+            if (title.includes('照專') && !title.includes('督導')) rankWeight = 4;
+            else if (/院長|局長|部長|署長|董事長|總裁/.test(title)) rankWeight = 1;
             else if (/副院長|議員|立委|代表|組長|督導/.test(title)) rankWeight = 2;
             else if (/主任|教授|醫師|處長|學者|專家|講師/.test(title)) rankWeight = 3;
             else rankWeight = 4;
@@ -2220,7 +2222,8 @@ class CheckInApp {
         }
 
         let rankWeight = 3;
-        if (/院長|局長|部長|署長|董事長|總裁/.test(title || '')) rankWeight = 1;
+        if (title.includes('照專') && !title.includes('督導')) rankWeight = 4;
+        else if (/院長|局長|部長|署長|董事長|總裁/.test(title || '')) rankWeight = 1;
         else if (/副院長|議員|立委|代表|組長|督導/.test(title || '')) rankWeight = 2;
         else if (/主任|教授|醫師|處長|學者|專家|講師/.test(title || '')) rankWeight = 3;
         else rankWeight = 4;

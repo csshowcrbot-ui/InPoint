@@ -943,7 +943,9 @@
       }
 
       listCont.innerHTML = arrivedGuests.map(g => {
-        const rank = g.rankWeight !== undefined ? g.rankWeight : 4;
+        let rank = g.rankWeight !== undefined ? g.rankWeight : 4;
+        const title = (g.title || '').trim();
+        if (title.includes('照專') && !title.includes('督導')) rank = 4;
         let vipClass = '';
         let rankBadge = '';
 

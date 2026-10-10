@@ -802,7 +802,11 @@ public class InMemoryEventService : IEventService
             string table = tokens.Length > 3 ? tokens[3] : "未排桌";
 
             int rank = 3;
-            if (title.Contains("總裁") || title.Contains("院長") || title.Contains("部長") || title.Contains("局長") || title.Contains("董事長") || title.Contains("次長") || title.Contains("署長"))
+            if (title.Contains("照專") && !title.Contains("督導"))
+            {
+                rank = 4;
+            }
+            else if (title.Contains("總裁") || title.Contains("院長") || title.Contains("部長") || title.Contains("局長") || title.Contains("董事長") || title.Contains("次長") || title.Contains("署長"))
             {
                 rank = 1;
             }
