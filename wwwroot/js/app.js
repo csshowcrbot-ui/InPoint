@@ -215,9 +215,14 @@ class CheckInApp {
 
         window.apiService.on('eventDeleted', async (data) => {
             this.events = this.events.filter(e => e.eventId !== data.eventId);
-            if (this.currentEventId === data.eventId) {
+            if (this.currentEventId === data.eventId || !this.events.some(e => e.eventId === this.currentEventId)) {
                 this.currentEventId = this.events.length > 0 ? this.events[0].eventId : '';
-                await this.loadGuestsAndStats();
+                if (this.currentEventId) {
+                    await this.loadGuestsAndStats();
+                } else {
+                    this.resetStats();
+                    this.renderAllViews();
+                }
             }
             this.populateEventSelector();
         });
@@ -981,7 +986,16 @@ class CheckInApp {
             if (this.currentManagingMemberUserId) {
                 await this.loadMemberEvents(this.currentManagingMemberUserId);
             }
+            if (this.currentEventId === eventId) {
+                this.currentEventId = '';
+            }
             await this.loadEvents();
+            if (this.currentEventId) {
+                await this.loadGuestsAndStats();
+            } else {
+                this.resetStats();
+                this.renderAllViews();
+            }
             await this.loadMembers();
         } catch (err) {
             alert(err.message || '刪除活動失敗');
@@ -1015,6 +1029,7 @@ class CheckInApp {
                 }
             } else {
                 this.currentEventId = '';
+                this.resetStats();
             }
             this.populateEventSelector();
         } catch (err) {
@@ -1183,11 +1198,12 @@ class CheckInApp {
             await window.apiService.deleteEvent(this.pendingDeleteEventId);
             this.showToast('活動已刪除', 'success');
             this.closeDeleteEventModal();
+            this.currentEventId = '';
             await this.loadEvents();
             if (this.currentEventId) {
                 await this.loadGuestsAndStats();
             } else {
-                this.guests = [];
+                this.resetStats();
                 this.renderAllViews();
             }
         } catch (err) {
@@ -1887,6 +1903,7 @@ class CheckInApp {
         const box = document.getElementById('currentEventDetailsBox');
         const nameEl = document.getElementById('adminEventNameDisplay');
         const statusEl = document.getElementById('adminEventStatusTag');
+        const actionsBar = document.getElementById('adminEventActionsBar');
         if (!box) return;
 
         const ev = this.events.find(e => e.eventId === this.currentEventId);
@@ -1903,9 +1920,11 @@ class CheckInApp {
                 statusEl.className = 'admin-event-status-tag inactive';
                 statusEl.textContent = '⚪ 無進行中活動';
             }
+            if (actionsBar) actionsBar.style.display = 'none';
             return;
         }
 
+        if (actionsBar) actionsBar.style.display = 'flex';
         if (nameEl) nameEl.textContent = ev.eventName;
         if (statusEl) {
             statusEl.className = `admin-event-status-tag ${ev.isActive ? 'active' : 'inactive'}`;
@@ -2015,13 +2034,20 @@ class CheckInApp {
     // =========================================================================
 
     exportExcelRoster() {
-        if (!this.currentEventId) return;
+        if (!this.currentEventId) {
+            alert('⚠️ 目前尚無活動場次可供匯出名冊，請先點擊上方【➕ 建立新活動】！');
+            return;
+        }
         const url = window.apiService.getExportUrl(this.currentEventId);
         window.open(url, '_blank');
         this.showToast('報到名冊 Excel / CSV 匯出已開始下載', 'success');
     }
 
     showImportExcelModal() {
+        if (!this.currentEventId) {
+            alert('⚠️ 目前尚無活動場次可供匯入名冊，請先點擊上方【➕ 建立新活動】！');
+            return;
+        }
         const modal = document.getElementById('importExcelModal');
         if (modal) modal.classList.add('active');
         this.parsedExcelRows = [];
