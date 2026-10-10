@@ -1,0 +1,1155 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>智慧活動報到系統 | InPoint Check-in & Host Dashboard</title>
+  <meta name="description" content="智慧活動報到系統與主持人即時戰情看板 - 簡約極致體驗、VIP尊榮階層排序、相機秒級QR掃描與多端即時同步。" />
+  <link rel="stylesheet" href="css/style.css?v=20261010_02" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎯</text></svg>" />
+</head>
+<body>
+
+  <!-- ========================================================================= -->
+  <!-- 0. LOGIN SCREEN OVERLAY (Requirement 1 & 2: Complete privacy until login) -->
+  <!-- ========================================================================= -->
+  <div class="login-overlay" id="loginOverlay">
+    <div class="login-card">
+      <div class="login-header">
+        <div class="login-logo">🎯</div>
+        <div class="login-title">InPoint 智慧活動報到系統</div>
+        <div class="login-subtitle">尊榮 VIP 智能排序 ‧ 秒級雲端跨端同步 ‧ 企業級會展方案</div>
+      </div>
+
+      <!-- Login Role Switcher Tabs -->
+      <div class="login-tabs">
+        <button type="button" class="login-tab-btn active" id="loginTabMember" onclick="app.switchLoginTab('Member')">
+          <span>👤 一般會員登入</span>
+        </button>
+        <button type="button" class="login-tab-btn" id="loginTabAdmin" onclick="app.switchLoginTab('Admin')">
+          <span>🛡️ 系統管理者登入</span>
+        </button>
+      </div>
+
+      <!-- Login Form -->
+      <div class="login-body">
+        <div class="login-alert" id="loginAlertBox"></div>
+
+        <form id="loginForm" onsubmit="app.handleLoginSubmit(event)">
+          <div class="form-group" style="margin-bottom: 14px;">
+            <label class="form-label" id="loginUsernameLabel">會員帳號</label>
+            <input type="text" id="loginUsername" class="form-control" placeholder="請輸入登入帳號" required autocomplete="username" />
+          </div>
+
+          <div class="form-group" style="margin-bottom: 18px;">
+            <label class="form-label">登入密碼</label>
+            <div style="position: relative;">
+              <input type="password" id="loginPassword" class="form-control" placeholder="請輸入登入密碼" required autocomplete="current-password" style="padding-right: 42px;" />
+              <button type="button" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; font-size: 15px; color: var(--text-muted); padding: 4px;" onclick="app.togglePasswordVisibility('loginPassword', this)">👁️</button>
+            </div>
+          </div>
+
+          <button type="submit" class="btn btn-primary" id="loginSubmitBtn" style="width: 100%; padding: 12px; font-size: 15px; font-weight: 700; justify-content: center; box-shadow: 0 4px 14px rgba(26,94,66,0.25);">
+            🚀 安全驗證登入
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Floating VIP Arrival Notification Container -->
+  <div class="vip-toast-container" id="vipToastContainer"></div>
+
+  <!-- Top Navigation Bar -->
+  <header class="app-header">
+    <div class="header-inner">
+      <!-- 1. Brand & Utilities Row -->
+      <div class="header-top-row">
+        <div class="brand-section">
+          <div class="brand-logo-mark">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+          </div>
+          <div class="brand-text">
+            <h1>InPoint <span>智慧活動報到系統</span></h1>
+            <div class="brand-sub">Smart Event Check-in & Host Dashboard</div>
+          </div>
+        </div>
+
+        <div class="header-tools">
+          <!-- User Profile & Plan Badge Widget -->
+          <div class="user-profile-widget" id="headerUserWidget" style="display: none;">
+            <div class="user-avatar-circle" id="userAvatarLetter">U</div>
+            <div class="user-profile-info">
+              <span class="user-display-name" id="userDisplayNameText">使用者</span>
+              <span class="user-plan-tag" id="userPlanTag">
+                <span class="plan-badge-single" id="userPlanBadge">單場活動</span>
+                <span id="userRemainingDaysText" style="color: var(--text-muted); font-size: 10px;"></span>
+              </span>
+            </div>
+            <button class="user-logout-btn" onclick="app.handleLogout()" title="登出系統">🚪 登出</button>
+          </div>
+
+          <div class="live-beacon" id="liveBeaconStatus" title="跨裝置即時同步連線中">
+            <span class="beacon-dot"></span> <span class="beacon-label">即時同步</span>
+          </div>
+          <button class="btn-icon" id="soundToggleBtn" title="音效開關 (目前開啟)">🔊</button>
+        </div>
+      </div>
+
+      <!-- 2. Controls & Tabs Unified Row (報到處作業等按鈕直接位於建立新活動後方) -->
+      <div class="header-controls-row">
+        <!-- Event Selector -->
+        <div class="event-selector-wrap">
+          <span class="event-icon">📅</span>
+          <select id="eventSelect" aria-label="選擇活動場次"></select>
+        </div>
+
+        <!-- Event Action Buttons -->
+        <div class="header-action-buttons">
+          <button class="btn btn-kiosk-screen" onclick="window.openKioskScreen()" title="開啟大螢幕 60 秒動態 QR Code 投影展示（供同仁手機掃碼自助報到）">
+            <span>📺 大螢幕動態 QR 投影</span>
+          </button>
+          <button class="btn btn-clone-event" id="btnCloneEvent" onclick="app.showCloneEventModal()" title="一鍵複製此活動為新範本 (機構年度方案專屬)">
+            <span>📋 範本複製</span>
+          </button>
+          <button class="btn btn-create-event" onclick="window.showCreateEventModal()" title="建立新的活動場次">
+            <span>➕ 建立新活動</span>
+          </button>
+        </div>
+
+        <div class="header-divider-dot"></div>
+
+        <!-- Navigation Tabs (緊接著建立新活動按鈕之後) -->
+        <nav class="nav-tabs" role="tablist">
+          <button class="nav-tab-btn active" data-tab="staff" role="tab">
+            <span>📱 報到處作業端</span>
+          </button>
+          <button class="nav-tab-btn" data-tab="host" role="tab">
+            <span>🖥️ 主持人即時看板</span>
+            <span class="badge-pill" style="background: var(--vip-gold); color: #fff;">VIP</span>
+          </button>
+          <button class="nav-tab-btn" data-tab="admin" role="tab">
+            <span>📁 名冊與匯出</span>
+          </button>
+          <button class="nav-tab-btn" data-tab="ai" id="navTabAi" role="tab">
+            <span>🤖 AI 智慧助手</span>
+          </button>
+          <button class="nav-tab-btn nav-tab-members" data-tab="members" id="navTabMembers" role="tab" style="display: none;">
+            <span>👥 會員方案管理</span>
+          </button>
+        </nav>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="main-content">
+
+    <!-- REALTIME METRICS STRIP (4 Cards matching original layout) -->
+    <section class="stats-grid" id="mainStatsGrid">
+      <div class="stat-card">
+        <div class="stat-header">
+          <span class="stat-title">大會總應到人數</span>
+          <div class="stat-icon-wrap icon-purple">👥</div>
+        </div>
+        <div class="stat-number">
+          <span id="statTotalGuests">0</span>
+          <span class="unit">位貴賓</span>
+        </div>
+        <div class="stat-meta">
+          <span id="statCapacityMeta">名冊建檔總數</span>
+          <span>活動即時連線</span>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-header">
+          <span class="stat-title">已完成報到人數</span>
+          <div class="stat-icon-wrap icon-green">✓</div>
+        </div>
+        <div class="stat-number">
+          <span id="statCheckedIn" style="color: #059669;">0</span>
+          <span class="unit">人已到場</span>
+        </div>
+        <div class="stat-meta">
+          <span>尚待報到：<strong id="statPending" style="color: var(--text-charcoal);">0</strong> 人</span>
+          <span>即時更新</span>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-header">
+          <span class="stat-title">現場總體出席率</span>
+          <div class="stat-icon-wrap icon-blue">📈</div>
+        </div>
+        <div class="stat-number">
+          <span id="statAttendanceRate">0%</span>
+        </div>
+        <div class="stat-progress-bar">
+          <div class="stat-progress-fill" id="statProgressFill" style="width: 0%;"></div>
+        </div>
+      </div>
+
+      <div class="stat-card vip-card">
+        <div class="stat-header">
+          <span class="stat-title">VIP 1~2 級長官到場比率</span>
+          <div class="stat-icon-wrap icon-gold">👑</div>
+        </div>
+        <div class="stat-number">
+          <span id="statVipRatio" style="color: #D97706;">0 / 0</span>
+          <span class="unit">位特等席</span>
+        </div>
+        <div class="stat-progress-bar">
+          <div class="stat-progress-fill stat-progress-gold" id="statVipProgressFill" style="width: 0%;"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================================================= -->
+    <!-- VIEW 1: STAFF CHECK-IN OPERATION HUB (Original Card Grid View)            -->
+    <!-- ========================================================================= -->
+    <section class="tab-view active" id="staffView">
+      <!-- Action Toolbar matching screenshot -->
+      <div class="staff-toolbar">
+        <div class="search-input-wrap" id="searchInputWrap">
+          <div class="search-icon-badge">🔍</div>
+          <input type="text" id="searchInput" class="search-input" placeholder="請輸入姓名、員工卡號、單位或電話搜尋..." autocomplete="off" />
+          <div class="search-action-hints">
+            <button type="button" class="search-clear-btn" id="searchClearBtn" title="清空欄位" onclick="app.clearSearchInput()">✕</button>
+            <span class="search-mode-tag" id="searchModeTag">⚡ Enter 自動報到</span>
+          </div>
+        </div>
+
+        <div class="filter-chips-group" role="group" aria-label="名單篩選">
+          <button class="filter-chip active" data-filter="all">全部貴賓</button>
+          <button class="filter-chip" data-filter="pending">⏳ 未報到</button>
+          <button class="filter-chip" data-filter="checked">✓ 已報到</button>
+          <button class="filter-chip vip-chip" data-filter="vip">👑 特級 VIP</button>
+        </div>
+
+        <div class="toolbar-actions-group">
+          <button class="btn btn-excel-import" onclick="app.showImportExcelModal()" title="批次匯入 Excel / CSV 名冊">
+            <span>📊 一鍵匯入 Excel</span>
+          </button>
+          <button class="btn btn-add-guest" onclick="app.showAddGuestModal()" title="現場手動新增貴賓">
+            <span>➕ 現場新增貴賓</span>
+          </button>
+          <button class="btn btn-scanner-icon" onclick="app.openScannerModal()" title="開啟相機 QR 掃碼">
+            <span>📷 相機掃描</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Guest Cards Grid (4-Column Card Grid) -->
+      <div class="guest-cards-grid" id="guestCardsGrid">
+        <!-- Dynamic Guest Cards rendered by JavaScript -->
+      </div>
+
+      <div class="empty-state" id="guestCardsEmpty" style="display: none;">
+        <div class="empty-icon">📭</div>
+        <div class="empty-title">查無相符之貴賓名單</div>
+        <div class="empty-desc">請嘗試不同的關鍵字搜尋，或點擊「現場新增貴賓 / 一鍵匯入 Excel」建立資料。</div>
+      </div>
+    </section>
+
+    <!-- ========================================================================= -->
+    <!-- ========================================================================= -->
+    <!-- VIEW 2: HOST VIP LIVE MONITORING DASHBOARD (主持人即時 VIP 戰情看板)          -->
+    <!-- ========================================================================= -->
+    <section class="tab-view" id="hostView">
+      <div class="host-cockpit-banner">
+        <div class="host-cockpit-title-group">
+          <h2><span>👑</span> 主持人即時 VIP 到場戰情看板</h2>
+          <p>專為大會司儀與主持人設計 ‧ 依院長、局長、特級貴賓階層排序 ‧ 即時掌握長官到場與致詞安排</p>
+          <div class="host-cockpit-stats-bar" id="hostVipStatsMiniBar">
+            <span class="host-stat-mini-pill"><span>👑</span> VIP 1 級長官：<strong id="miniVip1Stat" style="color: #FDE68A;">0 / 0</strong> 到場</span>
+            <span class="host-stat-mini-pill"><span>⭐</span> VIP 2 級長官：<strong id="miniVip2Stat" style="color: #FDE68A;">0 / 0</strong> 到場</span>
+            <span class="host-stat-mini-pill"><span>🎓</span> VIP 3 級長官：<strong id="miniVip3Stat" style="color: #A7F3D0;">0 / 0</strong> 到場</span>
+            <span class="host-stat-mini-pill"><span>🎯</span> 特等席到場率：<strong id="miniVipRateStat" style="color: #6EE7B7;">0%</strong></span>
+            <span class="host-stat-mini-pill" style="background: rgba(245, 158, 11, 0.25); border-color: rgba(245, 158, 11, 0.4);"><span>📢</span> 已完成唱名：<strong id="miniVipAnnounceStat" style="color: #FEF08A;">0 / 0</strong></span>
+          </div>
+        </div>
+        <div class="host-cockpit-tools">
+          <button type="button" class="btn-host-tool" onclick="app.refreshHostView()" title="即時同步最新戰情">
+            <span>🔄 立即重整戰情</span>
+          </button>
+          <button type="button" class="btn-host-tool" onclick="app.resetAllAnnounced()" title="重設所有長官唱名狀態" style="background: rgba(239, 68, 68, 0.2); border-color: rgba(239, 68, 68, 0.35);">
+            <span>🔄 重設唱名</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="host-cockpit-grid">
+        <div class="host-section-card is-arrived-sec">
+          <div class="host-card-title">
+            <span>🟢 已抵達現場長官 (可安排致詞引言)</span>
+            <span class="badge-pill" id="hostArrivedCount" style="background: var(--primary-forest); color: #fff; font-weight: 800; font-size: 13px; padding: 4px 12px;">0 位</span>
+          </div>
+          <div class="host-vip-stream" id="hostArrivedList">
+            <!-- Arrived VIP Cards rendered by JS -->
+          </div>
+        </div>
+
+        <div class="host-section-card is-pending-sec">
+          <div class="host-card-title">
+            <span>⏳ 尚未抵達之 VIP 貴賓 (持續追蹤中)</span>
+            <span class="badge-pill" id="hostPendingCount" style="background: #D97706; color: #fff; font-weight: 800; font-size: 13px; padding: 4px 12px;">0 位</span>
+          </div>
+          <div class="host-vip-stream" id="hostPendingList">
+            <!-- Pending VIP Cards rendered by JS -->
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================================================= -->
+    <!-- VIEW 3: GUEST ROSTER & DATA EXPORT CENTER (名冊與匯出 / 場次設定)            -->
+    <!-- ========================================================================= -->
+    <section class="tab-view" id="adminView">
+      <div class="admin-card-container">
+        
+        <!-- 1. Current Event Master Card -->
+        <div class="admin-event-hero">
+          <div class="admin-event-hero-header">
+            <div class="admin-event-name-group">
+              <span style="font-size: 26px;">📅</span>
+              <div>
+                <div class="admin-event-name" id="adminEventNameDisplay">月烤月嗨</div>
+                <div style="font-size: 13px; color: var(--text-muted); margin-top: 2px;">當前活動場次設定與中樞管理</div>
+              </div>
+            </div>
+            <div id="adminEventStatusTag" class="admin-event-status-tag active">
+              🟢 現場報到中 (接收多端簽到)
+            </div>
+          </div>
+
+          <!-- Dynamic Specs 4-Grid -->
+          <div id="currentEventDetailsBox">
+            <!-- Rendered by renderAdminSpecs() in JS -->
+          </div>
+
+          <!-- Actions Group -->
+          <div class="admin-actions-bar">
+            <button type="button" class="btn-pill-action btn-pill-warning" onclick="app.showToggleEventActiveModal()" id="btnToggleEventActive">
+              <span>⏸️ 停用 / 封存此活動</span>
+            </button>
+            <button type="button" class="btn-pill-action btn-pill-danger" onclick="app.showDeleteEventConfirmModal()">
+              <span>🗑️ 刪除此活動場次</span>
+            </button>
+            <button type="button" class="btn-pill-action btn-pill-secondary" onclick="app.showCloneEventModal()">
+              <span>📋 複製此活動為新範本</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 2. Export and Import Feature Cards -->
+        <div class="export-cards-grid">
+          
+          <!-- Card A: Export -->
+          <div class="export-feature-card">
+            <div>
+              <div class="export-card-header">
+                <div class="export-card-icon excel-icon">📊</div>
+                <div class="export-card-title">
+                  <h4>一鍵匯出完整報到名冊</h4>
+                  <p>Excel / CSV 格式完整存檔</p>
+                </div>
+              </div>
+              <div class="export-card-desc">
+                匯出包含員工編號、單位、職稱、姓名、桌號、簽到狀態、精準報到時間戳記與經手人員之完整報到資料表。
+              </div>
+            </div>
+            <div>
+              <button type="button" class="btn-export-primary" style="width: 100%;" onclick="app.exportExcelRoster()">
+                <span>📥 立即下載 Excel / CSV 報到名冊</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Card B: Import -->
+          <div class="export-feature-card">
+            <div>
+              <div class="export-card-header">
+                <div class="export-card-icon import-icon">📁</div>
+                <div class="export-card-title">
+                  <h4>批次匯入貴賓名冊</h4>
+                  <p>支援 .xlsx, .xls, .csv 檔案</p>
+                </div>
+              </div>
+              <div class="export-card-desc">
+                支援拖曳或上傳 Excel 檔案，智慧自動對齊「卡號、單位、職稱、姓名、桌號」欄位並自動識別 VIP 等級。
+              </div>
+            </div>
+            <div>
+              <button type="button" class="btn-import-secondary" style="width: 100%;" onclick="app.showImportExcelModal()">
+                <span>📁 選擇或拖曳 Excel 檔案匯入</span>
+              </button>
+              <div style="text-align: center; margin-top: 8px;">
+                <a href="javascript:void(0)" onclick="app.downloadExcelTemplate()" style="font-size: 12px; color: var(--primary-forest); font-weight: 700; text-decoration: underline;">
+                  📥 下載標準貴賓名單 Excel 範本
+                </a>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ========================================================================= -->
+    <!-- VIEW 4: AI SMART ASSISTANT (AI 智慧助手與語意名單辨識)                      -->
+    <!-- ========================================================================= -->
+    <section class="tab-view" id="aiView">
+      <div class="ai-copilot-container">
+        
+        <!-- 1. AI Natural Language Copilot Card -->
+        <div class="ai-copilot-card">
+          <div class="ai-copilot-header">
+            <div class="ai-copilot-title">
+              <span>✨</span> InPoint AI 智慧會務副駕駛
+            </div>
+            <span style="font-size: 12px; font-weight: 700; color: #059669; background: #ECFDF5; border: 1px solid #A7F3D0; padding: 3px 10px; border-radius: var(--radius-pill);">
+              🟢 AI 引擎連線中
+            </span>
+          </div>
+
+          <div style="font-size: 13px; color: #64748B; margin-bottom: 12px;">
+            輸入任何自然語言問題，AI 將即時盤點現場貴賓到場狀況、生成致詞提詞單或統計全場出席率：
+          </div>
+
+          <!-- Quick Chips -->
+          <div class="ai-chips-bar">
+            <button type="button" class="ai-prompt-chip" onclick="app.setAiPrompt('目前 VIP 長官到場情況與名單？')">💡 VIP 到場情況</button>
+            <button type="button" class="ai-prompt-chip" onclick="app.setAiPrompt('產出主持人開場致詞提詞單')">🎤 主持人開場致詞稿</button>
+            <button type="button" class="ai-prompt-chip" onclick="app.setAiPrompt('全場即時出席率與總結')">📊 全場出席率統計</button>
+            <button type="button" class="ai-prompt-chip" onclick="app.setAiPrompt('目前主桌與第一組貴賓到場狀況')">🍽️ 主桌席位盤點</button>
+          </div>
+
+          <!-- Query Input Capsule Bar -->
+          <div class="ai-query-capsule">
+            <span style="font-size: 16px; margin-right: 8px;">🔍</span>
+            <input type="text" id="aiQueryInput" class="ai-query-input" placeholder="請輸入您的會務問題 (例如：目前出席率如何？產出開場致詞稿)..." onkeydown="if(event.key==='Enter') app.sendAiQuery()" />
+            <button type="button" class="btn-ai-send" onclick="app.sendAiQuery()">
+              <span>🚀 發送提問</span>
+            </button>
+          </div>
+
+          <!-- AI Response Box -->
+          <div class="ai-response-box-styled" id="aiResponseBox">
+            <div class="ai-response-header">
+              <span>🤖</span> AI 會務秘書回覆：
+            </div>
+            <div id="aiResponseText" style="color: #475569;">
+              👋 您好！我是您的智慧會務助理。您可以點擊上方快捷提問，或直接輸入問題，我將立即為您分析本場活動的即時報到數據與貴賓資訊！
+            </div>
+          </div>
+        </div>
+
+        <!-- 2. AI Text Parser Card -->
+        <div class="ai-copilot-card">
+          <div class="ai-copilot-header">
+            <div class="ai-copilot-title">
+              <span>📝</span> AI 文字名冊智慧解析匯入
+            </div>
+            <span style="font-size: 12px; color: var(--text-muted);">支援 LINE 記事本、Email、Word 名單貼上</span>
+          </div>
+
+          <div style="font-size: 13px; color: #64748B; margin-bottom: 10px; line-height: 1.6;">
+            直接貼上任何通訊軟體或公文名冊文字，AI 將自動辨識「姓名、單位、職稱與等級」並寫入資料庫：
+          </div>
+
+          <textarea id="aiRawTextarea" class="form-control" style="min-height: 140px; font-size: 12.5px; font-family: monospace; border: 2px solid #E2EDE7; border-radius: 12px; padding: 12px; background: #F8FAF9;" placeholder="例：
+邱部長 衛生福利部 部長 VIP-1
+黃院長 秀傳紀念醫院 院長 VIP-1
+李局長 彰化縣衛生局 局長 VIP-1
+陳主任 心血管醫學部 主任 第3組"></textarea>
+
+          <div style="margin-top: 14px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+            <div style="font-size: 12px; color: #64748B;">
+              💡 提示：每一行輸入一位貴賓資料，系統將自動解析姓名、單位與等級。
+            </div>
+            <button type="button" class="btn btn-primary" style="padding: 10px 22px; font-size: 14px; font-weight: 800; border-radius: var(--radius-pill); box-shadow: 0 4px 14px rgba(26,94,66,0.25);" onclick="app.parseAiRawText()">
+              <span>🚀 AI 智慧辨識並匯入名單</span>
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ========================================================================= -->
+    <!-- VIEW 5: MEMBER & PLAN MANAGEMENT (Requirement 3: Admin Only)              -->
+    <!-- ========================================================================= -->
+    <section class="tab-view" id="membersView">
+      <div class="member-dashboard">
+        <!-- Stats Row -->
+        <div class="member-stats-row">
+          <div class="member-stat-box">
+            <div>
+              <div class="title">系統總會員數</div>
+              <div class="number" id="memberStatTotal">0</div>
+            </div>
+            <div class="icon">👥</div>
+          </div>
+          <div class="member-stat-box">
+            <div>
+              <div class="title">🌟 單場活動方案 (500人/7天)</div>
+              <div class="number" id="memberStatSingle" style="color: #0284C7;">0</div>
+            </div>
+            <div class="icon">🎟️</div>
+          </div>
+          <div class="member-stat-box">
+            <div>
+              <div class="title">👑 機構年度方案 (1500人/多場次)</div>
+              <div class="number" id="memberStatAnnual" style="color: #B45309;">0</div>
+            </div>
+            <div class="icon">🏢</div>
+          </div>
+          <div class="member-stat-box">
+            <div>
+              <div class="title">⏳ 即將到期 / 已到期</div>
+              <div class="number" id="memberStatExpiring" style="color: #DC2626;">0</div>
+            </div>
+            <div class="icon">⚠️</div>
+          </div>
+        </div>
+
+        <!-- Member Management Table Card -->
+        <div class="member-mgmt-table-card">
+          <div class="member-table-header">
+            <div>
+              <h3 style="font-size: 16px; font-weight: 800; color: var(--text-charcoal);">會員方案與使用期限管理</h3>
+              <p style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">管理者可建立一般會員、自訂有效期限、切換單場活動或機構年度方案規格。</p>
+            </div>
+            <div class="member-table-actions">
+              <button class="btn btn-primary" onclick="app.showCreateMemberModal()" style="box-shadow: 0 4px 12px rgba(26,94,66,0.2);">
+                <span>➕ 建立新一般會員</span>
+              </button>
+            </div>
+          </div>
+
+          <div style="overflow-x: auto;">
+            <table class="member-table" id="memberTable">
+              <thead>
+                <tr>
+                  <th>會員帳號</th>
+                  <th>負責人 / 單位名稱</th>
+                  <th>方案類型與規格</th>
+                  <th>有效期限 / 剩餘天數</th>
+                  <th>已建活動數</th>
+                  <th style="text-align: center;">狀態</th>
+                  <th style="text-align: center;">操作</th>
+                </tr>
+              </thead>
+              <tbody id="memberTableBody">
+                <!-- Dynamic Member Rows -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ========================================================================= -->
+  <!-- MODALS                                                                    -->
+  <!-- ========================================================================= -->
+
+  <!-- 1. Delete Guest Confirmation Modal -->
+  <div class="modal-backdrop" id="deleteGuestConfirmModal">
+    <div class="modal-dialog delete-modal-box">
+      <div class="delete-warn-icon">🗑️</div>
+      <div class="modal-title">確定要刪除此貴賓名單嗎？</div>
+      <div id="deleteGuestConfirmDesc" style="font-size: 14px; color: var(--text-muted);">
+        <!-- Target guest description -->
+      </div>
+      <div style="display: flex; gap: 12px; width: 100%; justify-content: center; margin-top: 14px;">
+        <button class="btn btn-secondary" style="flex: 1;" onclick="app.closeDeleteGuestModal()">取消保留</button>
+        <button class="btn btn-danger" style="flex: 1;" id="confirmDeleteGuestBtn">確認刪除</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. Delete Event Confirmation Modal -->
+  <div class="modal-backdrop" id="deleteEventConfirmModal">
+    <div class="modal-dialog delete-modal-box">
+      <div class="delete-warn-icon">⚠️</div>
+      <div class="modal-title" style="color: var(--alert-red);">確定要刪除此活動場次嗎？</div>
+      <div style="font-size: 14px; color: var(--text-muted);">
+        警告：刪除活動將會<strong>一併永久刪除該活動場次下的所有貴賓名單與報到時間紀錄</strong>，且無法復原！
+      </div>
+      <div id="deleteEventConfirmTargetDesc" style="background: var(--alert-red-bg); padding: 12px 18px; border-radius: 8px; border: 1px solid var(--alert-red-border); width: 100%; font-weight: 600;">
+        <!-- Target event description -->
+      </div>
+      <div style="display: flex; gap: 12px; width: 100%; justify-content: center; margin-top: 16px;">
+        <button class="btn btn-secondary" style="flex: 1;" onclick="app.closeDeleteEventModal()">取消保留</button>
+        <button class="btn btn-danger" style="flex: 1;" id="confirmDeleteEventBtn">確認永久刪除此場次</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. Toggle Event Active/Deactive Modal -->
+  <div class="modal-backdrop" id="toggleEventActiveModal">
+    <div class="modal-dialog delete-modal-box">
+      <div id="toggleEventWarnIcon" class="delete-warn-icon" style="background: rgba(230, 81, 0, 0.1); color: #e65100;">⏸️</div>
+      <div class="modal-title" id="toggleEventModalTitle" style="color: #e65100;">確定要停用此活動場次嗎？</div>
+      <div id="toggleEventModalDesc" style="font-size: 14px; color: var(--text-muted); line-height: 1.5;">
+        停用後，該活動將標記為<strong>已停用 (封存)</strong>，現場手機自助報到與大螢幕動態投影將預設不載入此活動。
+      </div>
+      <div id="toggleEventTargetDesc" style="background: #FFF8E1; padding: 12px 18px; border-radius: 8px; border: 1px solid #FFE082; width: 100%; font-weight: 600; text-align: left;">
+        <!-- Target event description -->
+      </div>
+      <div style="display: flex; gap: 12px; width: 100%; justify-content: center; margin-top: 16px;">
+        <button class="btn btn-secondary" style="flex: 1;" onclick="app.closeToggleEventActiveModal()">取消</button>
+        <button class="btn btn-warning" style="flex: 1;" id="confirmToggleEventActiveBtn">確認變更狀態</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. QR Code Camera Scanner Modal -->
+  <div class="modal-backdrop" id="qrScannerModal">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <div class="modal-title"><span>📷</span> 貴賓 QR Code 相機掃描報到</div>
+        <button class="modal-close-btn" onclick="app.closeScannerModal()">✕</button>
+      </div>
+      <div class="scanner-viewport-wrap">
+        <video id="scannerVideo" class="scanner-video" playsinline muted></video>
+        <div class="scanner-guide-frame"></div>
+        <div class="scanner-laser"></div>
+      </div>
+      <div id="scannerStatusText" style="font-size: 13px; color: var(--text-muted); text-align: center;">
+        請將貴賓手機或邀請函上的 QR 碼置於方框內進行識別
+      </div>
+      <div class="modal-footer" style="justify-content: space-between;">
+        <button class="btn btn-secondary" style="font-size: 12px;" onclick="app.simulateQuickScan()">
+          💡 模擬快速掃描第一筆
+        </button>
+        <button class="btn btn-primary" onclick="app.closeScannerModal()">關閉相機</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. Add Guest Modal -->
+  <div class="modal-backdrop" id="addGuestModal">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <div class="modal-title"><span>👤</span> 新增單筆貴賓名單</div>
+        <button class="modal-close-btn" onclick="app.closeAddGuestModal()">✕</button>
+      </div>
+      <form id="addGuestForm">
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">貴賓姓名 *</label>
+            <input type="text" id="addGuestName" class="form-control" placeholder="例：林志遠" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label">所屬單位 / 機關</label>
+            <input type="text" id="addGuestOrg" class="form-control" placeholder="例：南投縣衛生局" />
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">職稱 / 頭銜</label>
+            <input type="text" id="addGuestTitle" class="form-control" placeholder="例：副局長" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">員工卡號 / 編號 (選填)</label>
+            <input type="text" id="addGuestId" class="form-control" placeholder="例：00601441 (留空自動產生)" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">安排桌號 / 席位組別</label>
+          <input type="text" id="addGuestTableNo" class="form-control" placeholder="例：VIP-1 長官桌、第 3 組、12 桌" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">聯絡電話</label>
+          <input type="text" id="addGuestPhone" class="form-control" placeholder="例：0912-345-678" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">備註事項</label>
+          <input type="text" id="addGuestNotes" class="form-control" placeholder="例：專題座談與談人，請專人引導" />
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="app.closeAddGuestModal()">取消</button>
+          <button type="submit" class="btn btn-primary">確認新增</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 6. Guest QR Code Preview Modal -->
+  <div class="modal-backdrop" id="qrPreviewModal">
+    <div class="modal-dialog" style="text-align: center; max-width: 380px;">
+      <div class="modal-header">
+        <div class="modal-title" id="qrModalGuestTitle">貴賓專屬報到碼</div>
+        <button class="modal-close-btn" onclick="app.closeQrModal()">✕</button>
+      </div>
+      <div style="padding: 16px 0; display: flex; flex-direction: column; align-items: center; gap: 12px;">
+        <div id="qrCodeSvgContainer"></div>
+        <div id="qrModalGuestDesc" style="font-size: 13px; font-weight: 600; color: var(--text-charcoal);"></div>
+        <div style="font-size: 12px; color: var(--text-subtle);">現場報到處掃描此碼可立即完成簽到手續</div>
+      </div>
+      <div class="modal-footer" style="justify-content: center;">
+        <button class="btn btn-primary" onclick="app.closeQrModal()">完成關閉</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 7. Create Event Modal -->
+  <div class="modal-backdrop" id="createEventModal">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <div class="modal-title"><span>📅</span> 建立新活動場次</div>
+        <button class="modal-close-btn" onclick="app.closeCreateEventModal()">✕</button>
+      </div>
+      <form id="createEventForm" onsubmit="app.handleCreateEventSubmit(event)">
+        <div class="form-group">
+          <label class="form-label">活動名稱 *</label>
+          <input type="text" id="createEventName" class="form-control" placeholder="例：2026 年度策略高峰會暨成果研討會" required />
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">活動日期與時間 *</label>
+            <input type="datetime-local" id="createEventDate" class="form-control" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label">舉辦地點</label>
+            <input type="text" id="createEventLocation" class="form-control" placeholder="例：醫療大樓 9F 國際會議廳" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">活動簡介 / 說明</label>
+          <textarea id="createEventDesc" class="form-control" style="min-height: 80px; resize: vertical;" placeholder="請輸入活動背景說明或注意事項..."></textarea>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="app.closeCreateEventModal()">取消</button>
+          <button type="submit" class="btn btn-primary" id="confirmCreateEventBtn">確認建立活動</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 8. Clone Event Modal (範本複製) -->
+  <div class="modal-backdrop" id="cloneEventModal">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <div class="modal-title"><span>📋</span> 複製活動範本 (機構年度方案尊榮專屬)</div>
+        <button class="modal-close-btn" onclick="app.closeCloneEventModal()">✕</button>
+      </div>
+      <form id="cloneEventForm" onsubmit="app.handleCloneEventSubmit(event)">
+        <div style="background: #FFF8E1; border: 1px solid #FFE082; padding: 12px 16px; border-radius: 10px; margin-bottom: 14px; font-size: 13px; color: #92400E;">
+          💡 將快速複製現有活動之設定、地點與說明，可自訂新名稱與日期，並可選擇是否一併複製貴賓名冊結構。
+        </div>
+        <div class="form-group">
+          <label class="form-label">新活動名稱 *</label>
+          <input type="text" id="cloneEventName" class="form-control" placeholder="例：2026 第二季醫療專題研討會" required />
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">新活動日期與時間 *</label>
+            <input type="datetime-local" id="cloneEventDate" class="form-control" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label">舉辦地點</label>
+            <input type="text" id="cloneEventLocation" class="form-control" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label style="display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 13px; cursor: pointer;">
+            <input type="checkbox" id="cloneEventCopyGuests" style="width: 16px; height: 16px;" />
+            <span>一併複製現有名冊與座位安排 (報到狀態將自動重設為未報到)</span>
+          </label>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="app.closeCloneEventModal()">取消</button>
+          <button type="submit" class="btn btn-warning">確認複製建立新活動</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 9. Create Member Modal (管理者建立一般會員) -->
+  <div class="modal-backdrop" id="createMemberModal">
+    <div class="modal-dialog" style="max-width: 650px;">
+      <div class="modal-header">
+        <div class="modal-title"><span>👥</span> 建立一般會員帳號</div>
+        <button class="modal-close-btn" onclick="app.closeCreateMemberModal()">✕</button>
+      </div>
+      <form id="createMemberForm" onsubmit="app.handleCreateMemberSubmit(event)">
+        
+        <!-- Plan Type Selector -->
+        <label class="form-label" style="font-weight: 800;">方案類型選擇 (Core Specifications) *</label>
+        <div class="plan-selector-grid">
+          <!-- Option A: Single Event Plan -->
+          <div class="plan-card-option selected" id="planOptionSingle" onclick="app.selectPlanOption('SingleEvent')">
+            <div class="plan-card-header">
+              <div class="plan-card-title"><span>🌟</span> 單場活動方案</div>
+              <span class="plan-card-tag" style="background: #E0F2FE; color: #0284C7;">7天有效 / 500人</span>
+            </div>
+            <ul class="plan-features-list">
+              <li>單一場次授權（有效天數 7 天）</li>
+              <li>單場人數上限 500 人</li>
+              <li>活動結束 Excel / CSV 一鍵匯出</li>
+            </ul>
+          </div>
+
+          <!-- Option B: Annual Organization Plan -->
+          <div class="plan-card-option" id="planOptionAnnual" onclick="app.selectPlanOption('AnnualOrg')">
+            <div class="plan-card-header">
+              <div class="plan-card-title"><span>👑</span> 機構年度方案</div>
+              <span class="plan-card-tag" style="background: #FEF3C7; color: #B45309;">1年有效 / 1500人</span>
+            </div>
+            <ul class="plan-features-list">
+              <li>無限場次建立</li>
+              <li>單場支援人數上限至 1500 人</li>
+              <li>完整多場次歷史存檔與範本複製</li>
+            </ul>
+          </div>
+        </div>
+
+        <input type="hidden" id="createMemberPlanType" value="SingleEvent" />
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">會員登入帳號 *</label>
+            <input type="text" id="createMemberUsername" class="form-control" placeholder="例：csh_med" required autocomplete="off" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">登入密碼 *</label>
+            <input type="password" id="createMemberPassword" class="form-control" placeholder="請設定登入密碼" required autocomplete="new-password" />
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">所屬單位 / 機構名稱 *</label>
+            <input type="text" id="createMemberOrg" class="form-control" placeholder="例：彰化秀傳紀念醫院" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label">負責人姓名 / 稱謂</label>
+            <input type="text" id="createMemberDisplayName" class="form-control" placeholder="例：張專員" />
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">使用有效期限 *</label>
+            <input type="date" id="createMemberExpireAt" class="form-control" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label">單場人數上限 (人)</label>
+            <input type="number" id="createMemberMaxGuests" class="form-control" value="500" min="1" max="5000" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">備註說明</label>
+          <input type="text" id="createMemberNotes" class="form-control" placeholder="例：2026 年度國際研討會授權" />
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="app.closeCreateMemberModal()">取消</button>
+          <button type="submit" class="btn btn-primary" id="btnSubmitCreateMember">確認建立會員</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 10. Edit Member Modal -->
+  <div class="modal-backdrop" id="editMemberModal">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <div class="modal-title"><span>✏️</span> 編輯會員資料與延長效期</div>
+        <button class="modal-close-btn" onclick="app.closeEditMemberModal()">✕</button>
+      </div>
+      <form id="editMemberForm" onsubmit="app.handleEditMemberSubmit(event)">
+        <input type="hidden" id="editMemberUserId" />
+        
+        <div class="form-group">
+          <label class="form-label">會員帳號</label>
+          <input type="text" id="editMemberUsername" class="form-control" disabled style="background: #F3F4F6;" />
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">機構名稱 *</label>
+            <input type="text" id="editMemberOrg" class="form-control" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label">負責人姓名</label>
+            <input type="text" id="editMemberDisplayName" class="form-control" />
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">方案類型</label>
+            <select id="editMemberPlanType" class="form-control" onchange="app.handleEditPlanTypeChange()">
+              <option value="SingleEvent">🌟 單場活動方案 (500人/7天)</option>
+              <option value="AnnualOrg">👑 機構年度方案 (1500人/無限場次/範本複製)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">有效期限 *</label>
+            <input type="date" id="editMemberExpireAt" class="form-control" required />
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">單場人數上限</label>
+            <input type="number" id="editMemberMaxGuests" class="form-control" min="1" max="5000" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">重設新密碼 (留空則不修改)</label>
+            <input type="password" id="editMemberPassword" class="form-control" placeholder="留空保留原密碼" autocomplete="new-password" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">帳號狀態</label>
+          <select id="editMemberIsActive" class="form-control">
+            <option value="true">🟢 正常啟用</option>
+            <option value="false">🔴 停用帳號</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">備註說明</label>
+          <input type="text" id="editMemberNotes" class="form-control" />
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="app.closeEditMemberModal()">取消</button>
+          <button type="submit" class="btn btn-primary">儲存變更</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 10.5 Member Events Management Modal (該會員所建立的活動管理) -->
+  <div class="modal-backdrop" id="memberEventsModal">
+    <div class="modal-dialog" style="max-width: 920px;">
+      <div class="modal-header">
+        <div>
+          <div class="modal-title" id="memberEventsModalTitle"><span>📂</span> 會員活動管理</div>
+          <div id="memberEventsModalSubtitle" style="font-size: 13px; color: var(--text-muted); margin-top: 3px;">
+            檢視與管理該會員名下建立的所有活動場次
+          </div>
+        </div>
+        <button class="modal-close-btn" onclick="app.closeMemberEventsModal()">✕</button>
+      </div>
+
+      <!-- Member Quick Info Banner -->
+      <div class="member-events-user-banner" id="memberEventsUserBanner">
+        <div class="user-info-chip">
+          <span class="label">所屬單位</span>
+          <strong id="memberEventsBannerOrg">-</strong>
+        </div>
+        <div class="user-info-chip">
+          <span class="label">負責人/帳號</span>
+          <strong id="memberEventsBannerUser">-</strong>
+        </div>
+        <div class="user-info-chip">
+          <span class="label">方案規格</span>
+          <span id="memberEventsBannerPlan">-</span>
+        </div>
+        <div class="user-info-chip">
+          <span class="label">有效期限</span>
+          <strong id="memberEventsBannerExpire">-</strong>
+        </div>
+      </div>
+
+      <!-- Toolbar -->
+      <div style="display: flex; justify-content: space-between; align-items: center; margin: 16px 0 12px 0; flex-wrap: wrap; gap: 8px;">
+        <div style="font-size: 14px; font-weight: 700; color: var(--text-charcoal);" id="memberEventsCountText">
+          共 0 場活動
+        </div>
+        <div style="display: flex; gap: 8px;">
+          <button class="btn btn-secondary" style="font-size: 12px; padding: 6px 12px;" onclick="app.refreshCurrentMemberEvents()">
+            <span>🔄 重新整理</span>
+          </button>
+          <button class="btn btn-primary" style="font-size: 12px; padding: 6px 14px;" onclick="app.showCreateEventForMemberModal()">
+            <span>➕ 為此會員建立新活動</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Events Table Container -->
+      <div style="max-height: 380px; overflow-y: auto; border: 1px solid var(--border-light); border-radius: 10px;">
+        <table class="member-events-table" style="width: 100%; border-collapse: collapse; font-size: 13px;">
+          <thead style="position: sticky; top: 0; background: #F8FAFC; z-index: 2; border-bottom: 2px solid #E2E8F0;">
+            <tr>
+              <th style="padding: 10px 12px; text-align: left; color: #475569;">活動名稱 / 代碼</th>
+              <th style="padding: 10px 12px; text-align: left; color: #475569;">活動日期 / 地點</th>
+              <th style="padding: 10px 12px; text-align: center; color: #475569;">貴賓與報到率</th>
+              <th style="padding: 10px 12px; text-align: center; color: #475569;">狀態</th>
+              <th style="padding: 10px 12px; text-align: center; color: #475569;">管理功能</th>
+            </tr>
+          </thead>
+          <tbody id="memberEventsTableBody">
+            <!-- Dynamic Rows rendered in app.js -->
+          </tbody>
+        </table>
+      </div>
+
+      <div class="modal-footer" style="margin-top: 16px;">
+        <button type="button" class="btn btn-secondary" onclick="app.closeMemberEventsModal()">關閉視窗</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 10.6 Clone Member Event Modal (為會員複製活動為新範本) -->
+  <div class="modal-backdrop" id="cloneMemberEventModal">
+    <div class="modal-dialog" style="max-width: 580px;">
+      <div class="modal-header">
+        <div class="modal-title"><span>📋</span> 複製此活動為新範本</div>
+        <button class="modal-close-btn" onclick="app.closeCloneMemberEventModal()">✕</button>
+      </div>
+      <form id="cloneMemberEventForm" onsubmit="app.handleCloneMemberEventSubmit(event)">
+        <input type="hidden" id="cloneMemberEventSourceId" />
+        <input type="hidden" id="cloneMemberEventTargetUserId" />
+        <input type="hidden" id="cloneMemberEventTargetUsername" />
+
+        <div style="background: #FFFBEB; border: 1px solid #FDE68A; padding: 12px 16px; border-radius: 8px; margin-bottom: 14px; font-size: 13px; color: #92400E;">
+          💡 將以此活動為範本建立全新場次，新活動將自動歸屬於該會員名下。
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">來源活動名稱</label>
+          <input type="text" id="cloneMemberEventSourceDisplay" class="form-control" disabled style="background: #F3F4F6;" />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">新活動名稱 *</label>
+          <input type="text" id="cloneMemberEventNewName" class="form-control" required />
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">新活動日期與時間 *</label>
+            <input type="datetime-local" id="cloneMemberEventNewDate" class="form-control" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label">活動地點</label>
+            <input type="text" id="cloneMemberEventNewLocation" class="form-control" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label style="display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 13px; cursor: pointer;">
+            <input type="checkbox" id="cloneMemberEventCopyGuests" style="width: 16px; height: 16px;" />
+            <span>一併複製現有名冊 (報到狀態將自動重設為未報到)</span>
+          </label>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="app.closeCloneMemberEventModal()">取消</button>
+          <button type="submit" class="btn btn-warning">確認複製為新範本</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 10.7 Delete Member Event Confirmation Modal -->
+  <div class="modal-backdrop" id="deleteMemberEventConfirmModal">
+    <div class="modal-dialog delete-modal-box">
+      <div class="delete-warn-icon">⚠️</div>
+      <div class="modal-title" style="color: var(--alert-red);">確定要刪除此會員活動場次嗎？</div>
+      <div style="font-size: 14px; color: var(--text-muted); line-height: 1.5;">
+        警告：刪除活動將會<strong>一併永久刪除該場次下的所有貴賓名單、報到紀錄與統計數據</strong>，且無法復原！
+      </div>
+      <div id="deleteMemberEventTargetDesc" style="background: var(--alert-red-bg); padding: 12px 18px; border-radius: 8px; border: 1px solid var(--alert-red-border); width: 100%; font-weight: 600; text-align: left; margin-top: 10px;">
+        <!-- Target event desc -->
+      </div>
+      <div style="display: flex; gap: 12px; width: 100%; justify-content: center; margin-top: 16px;">
+        <button class="btn btn-secondary" style="flex: 1;" onclick="app.closeDeleteMemberEventModal()">取消保留</button>
+        <button class="btn btn-danger" style="flex: 1;" id="confirmDeleteMemberEventBtn">確認永久刪除此活動</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 11. Import Excel / CSV Modal -->
+  <div class="modal-backdrop" id="importExcelModal">
+    <div class="modal-dialog" style="max-width: 720px;">
+      <div class="modal-header">
+        <div class="modal-title"><span>📊</span> 一鍵匯入 Excel / CSV 貴賓名冊</div>
+        <button class="modal-close-btn" onclick="app.closeImportExcelModal()">✕</button>
+      </div>
+
+      <div class="excel-spec-banner">
+        <div style="font-weight: 700; margin-bottom: 4px; color: var(--primary-forest);">
+          📋 支援標準 Excel (.xlsx / .xls) 與 CSV 檔案格式（智慧辨識「員工卡號」、「員工編號」）
+        </div>
+        <div style="font-size: 13px; color: var(--text-muted); line-height: 1.6;">
+          支援欄位標題：
+          <span style="display:inline-block; padding:2px 8px; border-radius:4px; font-weight:600; background:#fff8e1; color:#b78103; margin: 2px;">員工卡號 / 員工編號 / 卡號 / 工號</span>
+          <span style="display:inline-block; padding:2px 8px; border-radius:4px; font-weight:600; background:#e8f5e9; color:#1b5e20; margin: 2px;">單位 / 部門</span>
+          <span style="display:inline-block; padding:2px 8px; border-radius:4px; font-weight:600; background:#fff3e0; color:#e65100; margin: 2px;">職稱</span>
+          <span style="display:inline-block; padding:2px 8px; border-radius:4px; font-weight:600; background:#f3e5f5; color:#4a148c; margin: 2px;">姓名</span>
+          <span style="display:inline-block; padding:2px 8px; border-radius:4px; font-weight:600; background:#ede7f6; color:#311b92; margin: 2px;">聯絡人 / 電話</span>
+        </div>
+      </div>
+
+      <div class="excel-dropzone" id="excelDropzone" onclick="document.getElementById('excelFileInput').click()">
+        <input type="file" id="excelFileInput" accept=".xlsx, .xls, .csv" style="display: none;" onchange="app.handleExcelFileSelect(event)" />
+        <div style="font-size: 36px; margin-bottom: 8px;">📁</div>
+        <div style="font-weight: 700; font-size: 15px; color: var(--text-charcoal);">點擊此處選擇檔案 或 將 Excel 檔案拖曳至此</div>
+        <div style="font-size: 12px; color: var(--text-subtle); margin-top: 4px;">支援 Microsoft Excel (.xlsx, .xls) 及 UTF-8 / CSV 檔案</div>
+      </div>
+
+      <div style="display: flex; justify-content: space-between; align-items: center; margin: 14px 0 8px 0; flex-wrap: wrap; gap: 8px;">
+        <span style="font-size: 13px; font-weight: 600; color: var(--text-charcoal);" id="importFileStatusText">尚未選取檔案</span>
+        <button class="btn btn-secondary" style="font-size: 12px; padding: 6px 14px;" onclick="app.downloadExcelTemplate()">
+          📥 下載標準 Excel 範本檔案 (含員工卡號/編號)
+        </button>
+      </div>
+
+      <div id="excelPreviewContainer" style="display: none; max-height: 240px; overflow-y: auto; border: 1px solid var(--border-light); border-radius: 8px; margin-top: 8px;">
+        <table style="width: 100%; font-size: 12px; text-align: left; border-collapse: collapse;">
+          <thead style="position: sticky; top: 0; background: #EEF7F2; z-index: 1; color: var(--primary-forest); font-weight: 700;">
+            <tr>
+              <th style="padding: 8px 10px; border-bottom: 1px solid #D1E5D9;">系統報到編號</th>
+              <th style="padding: 8px 10px; border-bottom: 1px solid #D1E5D9;">員工卡號/編號</th>
+              <th style="padding: 8px 10px; border-bottom: 1px solid #D1E5D9;">單位</th>
+              <th style="padding: 8px 10px; border-bottom: 1px solid #D1E5D9;">職稱</th>
+              <th style="padding: 8px 10px; border-bottom: 1px solid #D1E5D9;">姓名</th>
+              <th style="padding: 8px 10px; border-bottom: 1px solid #D1E5D9;">桌號 / 組別</th>
+              <th style="padding: 8px 10px; border-bottom: 1px solid #D1E5D9;">聯絡人</th>
+              <th style="padding: 8px 10px; border-bottom: 1px solid #D1E5D9;">自動識別等級</th>
+            </tr>
+          </thead>
+          <tbody id="excelPreviewTbody">
+            <!-- Dynamic rows -->
+          </tbody>
+        </table>
+      </div>
+
+      <div class="modal-footer" style="margin-top: 16px;">
+        <button type="button" class="btn btn-secondary" onclick="app.closeImportExcelModal()">取消</button>
+        <button type="button" class="btn btn-primary" id="confirmImportExcelBtn" style="display: none;" onclick="app.executeImportExcel()">
+          🚀 確認匯入名冊（寫入資料庫）
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="appToastContainer" class="app-toast-container"></div>
+
+  <!-- SheetJS Excel Parser Library -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+  <!-- Scripts (with Cache Buster) -->
+  <script src="js/qrcode-lib.js?v=20261010_03"></script>
+  <script src="js/audio.js?v=20261010_03"></script>
+  <script src="js/api.js?v=20261010_03"></script>
+  <script src="js/app.js?v=20261010_03"></script>
+</body>
+</html>

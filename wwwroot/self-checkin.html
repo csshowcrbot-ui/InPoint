@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>手機自助報到 | 智慧活動報到系統</title>
+  <link rel="stylesheet" href="css/style.css?v=20260917_13" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎯</text></svg>" />
+  <style>
+    body {
+      background-color: #F4F7F5;
+      font-family: var(--font-base);
+      color: var(--text-charcoal);
+      margin: 0;
+      padding: 16px;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      box-sizing: border-box;
+    }
+
+    .self-container {
+      max-width: 480px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    .self-header {
+      text-align: center;
+      margin-top: 10px;
+      margin-bottom: 24px;
+    }
+
+    .self-logo-mark {
+      width: 54px;
+      height: 54px;
+      background: linear-gradient(135deg, var(--primary-forest), #2ECC71);
+      border-radius: 16px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-size: 26px;
+      font-weight: 900;
+      box-shadow: 0 4px 14px rgba(26, 94, 66, 0.25);
+      margin-bottom: 12px;
+    }
+
+    .self-header h1 {
+      font-size: 20px;
+      font-weight: 800;
+      color: var(--primary-forest);
+      margin: 0;
+    }
+
+    .self-header p {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    /* Form Card */
+    .self-card {
+      background: #FFFFFF;
+      border-radius: 20px;
+      padding: 26px 22px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.06);
+      border: 1px solid #DCE7E1;
+    }
+
+    .self-field-group {
+      margin-bottom: 20px;
+    }
+
+    .self-label {
+      display: block;
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text-charcoal);
+      margin-bottom: 8px;
+    }
+
+    .self-input-wrap {
+      position: relative;
+    }
+
+    .self-input {
+      width: 100%;
+      padding: 14px 16px 14px 44px;
+      border-radius: 14px;
+      border: 2px solid #C8DDD2;
+      background: #F9FCFA;
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text-charcoal);
+      outline: none;
+      box-sizing: border-box;
+      transition: all var(--transition-fast);
+    }
+
+    .self-input:focus {
+      border-color: var(--primary-forest);
+      background: #FFFFFF;
+      box-shadow: 0 0 0 4px rgba(26, 94, 66, 0.12);
+    }
+
+    .self-input-icon {
+      position: absolute;
+      left: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 18px;
+    }
+
+    .self-hint {
+      font-size: 12px;
+      color: #6C7D73;
+      margin-top: 6px;
+      line-height: 1.5;
+    }
+
+    .btn-self-submit {
+      width: 100%;
+      padding: 14px;
+      border-radius: 14px;
+      background: linear-gradient(135deg, var(--primary-forest), #27AE60);
+      color: #FFFFFF;
+      border: none;
+      font-size: 16px;
+      font-weight: 800;
+      cursor: pointer;
+      box-shadow: 0 4px 14px rgba(26, 94, 66, 0.28);
+      transition: all var(--transition-fast);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .btn-self-submit:active {
+      transform: scale(0.98);
+    }
+
+    .btn-self-submit:disabled {
+      background: #A0BDB0;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+
+    /* Success Result Screen */
+    .success-screen {
+      display: none;
+      text-align: center;
+      padding: 10px 0;
+      animation: fadeIn 0.4s ease-out;
+    }
+
+    .success-icon {
+      width: 68px;
+      height: 68px;
+      background: #E8F8F0;
+      color: #27AE60;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 36px;
+      margin-bottom: 14px;
+      border: 2px solid #A9DFBF;
+    }
+
+    .guest-welcome-card {
+      background: #F4FAF6;
+      border-radius: 16px;
+      padding: 18px;
+      margin: 18px 0;
+      border: 1px solid #C5E6D4;
+      text-align: left;
+    }
+
+    .table-seat-banner {
+      background: #EAF7EE;
+      border: 2px dashed #2ECC71;
+      border-radius: 14px;
+      padding: 14px;
+      margin-top: 14px;
+      text-align: center;
+    }
+
+    .table-seat-banner strong {
+      font-size: 22px;
+      color: var(--primary-forest);
+      display: block;
+      margin-top: 4px;
+    }
+
+    /* Expired Alert Screen */
+    .expired-screen {
+      display: none;
+      text-align: center;
+      padding: 10px 0;
+    }
+
+    .expired-icon {
+      width: 64px;
+      height: 64px;
+      background: #FDF2E9;
+      color: #E67E22;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 32px;
+      margin-bottom: 14px;
+      border: 2px solid #F8C471;
+    }
+
+    .self-footer {
+      text-align: center;
+      font-size: 12px;
+      color: var(--text-subtle);
+      margin-top: 24px;
+      padding-bottom: 12px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="self-container">
+    
+    <!-- 1. Header -->
+    <header class="self-header">
+      <div class="self-logo-mark">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+      </div>
+      <h1>智慧活動 自助報到</h1>
+      <p id="eventTitleText">InPoint Smart Event Mobile Self Check-in</p>
+    </header>
+
+    <!-- 2. Main Form Card -->
+    <main class="self-card">
+      
+      <!-- Normal Form -->
+      <form id="selfCheckInForm" onsubmit="handleSelfCheckInSubmit(event)">
+        
+        <div class="self-field-group">
+          <label class="self-label" for="guestIdentifier">
+            <span>💳 員工卡號 / 員工編號 / 姓名</span>
+          </label>
+          <div class="self-input-wrap">
+            <span class="self-input-icon">👤</span>
+            <input type="text" id="guestIdentifier" class="self-input" placeholder="例如: 601441 或 700701" required autocomplete="off" autofocus />
+          </div>
+          <div class="self-hint">
+            💡 提示：若卡號開頭為 0（如 <code>00601441</code>），系統將自動為您忽略前導 0 進行精準匹配。
+          </div>
+        </div>
+
+        <button type="submit" class="btn-self-submit" id="submitBtn">
+          <span>🚀 確認自主報到</span>
+        </button>
+
+      </form>
+
+      <!-- Success Screen -->
+      <div class="success-screen" id="successScreen">
+        <div class="success-icon">✓</div>
+        <h2 style="font-size: 20px; font-weight: 800; color: var(--primary-forest); margin: 0;">報到成功！</h2>
+        <p style="font-size: 13px; color: var(--text-muted); margin-top: 4px;" id="checkInTimeText">已完成入場簽到</p>
+
+        <div class="guest-welcome-card" id="guestWelcomeCard">
+          <!-- Dynamic details -->
+        </div>
+
+        <div class="table-seat-banner" id="tableSeatBanner">
+          <span style="font-size: 13px; color: #526359; font-weight: 600;">大會為您安排之席位：</span>
+          <strong id="guestTableNo">未排桌</strong>
+        </div>
+
+        <button type="button" class="btn-self-submit" style="margin-top: 20px; background: #E8F4EC; color: var(--primary-forest); border: 1px solid #A3D4BE;" onclick="location.reload()">
+          <span>✓ 已完成 (返回)</span>
+        </button>
+      </div>
+
+      <!-- Expired Screen -->
+      <div class="expired-screen" id="expiredScreen">
+        <div class="expired-icon">⚠️</div>
+        <h2 style="font-size: 18px; font-weight: 800; color: #D35400; margin: 0;">此 QR Code 已過期失效</h2>
+        <div style="font-size: 14px; color: #5D6D7E; margin: 12px 0 20px 0; line-height: 1.6; text-align: left; background: #FEF9E7; padding: 14px; border-radius: 12px; border: 1px solid #F9E79F;">
+          為維護活動大會報到真實性，本系統採用 <strong>60 秒動態防作弊機制</strong>。此條碼已超過安全時限，請您直接掃描現場大螢幕之<strong>最新動態 QR 碼</strong>！
+        </div>
+        <button type="button" class="btn-self-submit" onclick="window.close(); history.back();">
+          <span>關閉並重新掃描</span>
+        </button>
+      </div>
+
+    </main>
+
+    <!-- 3. Footer -->
+    <footer class="self-footer">
+      <div>智慧活動即時報到平台 · InPoint</div>
+      <div style="margin-top: 4px; opacity: 0.8;">Smart Event Check-in & Management System</div>
+    </footer>
+
+  </div>
+
+  <script src="js/audio.js?v=20260917_23"></script>
+  <script>
+    function getApiBase() {
+      let pathname = window.location.pathname;
+      let base = pathname.substring(0, pathname.lastIndexOf('/') + 1);
+      if (!base.endsWith('/')) base += '/';
+      return base + 'api';
+    }
+
+    const urlParams = new URLSearchParams(window.location.search);
+    let eventId = urlParams.get('eventId') || '';
+    const token = urlParams.get('token') || '';
+    const qrTs = parseInt(urlParams.get('ts') || '0', 10);
+
+    async function initSelfCheckIn() {
+      const apiBase = getApiBase();
+      try {
+        const res = await fetch(`${apiBase}/events?t=${Date.now()}`);
+        if (res.ok) {
+          const evs = await res.json();
+          if (evs && evs.length > 0) {
+            if (!eventId) {
+              const active = evs.find(e => e.isActive) || evs[0];
+              eventId = active.eventId;
+            }
+            const currentEv = evs.find(e => e.eventId === eventId) || evs[0];
+            if (currentEv && currentEv.eventName) {
+              const titleEl = document.getElementById('eventTitleText');
+              if (titleEl) titleEl.textContent = `${currentEv.eventName} · 現場自主簽到`;
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('Load event details error:', err);
+      }
+      if (!eventId) eventId = 'event_20260917_084526';
+    }
+
+    function isTokenExpired() {
+      if (!token) return true;
+      if (qrTs > 0) {
+        const nowSec = Math.floor(Date.now() / 1000);
+        // If the QR Code was generated more than 75 seconds ago (60s window + 15s leeway), it is an expired screenshot / forwarded image!
+        if (Math.abs(nowSec - qrTs) > 75) {
+          return true;
+        }
+      }
+      return false;
+    }
+
+    function showExpiredScreen() {
+      const form = document.getElementById('selfCheckInForm');
+      const exp = document.getElementById('expiredScreen');
+      if (form) form.style.display = 'none';
+      if (exp) exp.style.display = 'block';
+    }
+
+    // 1. Check upon opening the page
+    if (isTokenExpired()) {
+      showExpiredScreen();
+    } else if (qrTs > 0) {
+      // 2. Active countdown for the remaining valid seconds on page
+      const nowSec = Math.floor(Date.now() / 1000);
+      const remainingMs = Math.max(1000, (75 - (nowSec - qrTs)) * 1000);
+      setTimeout(() => {
+        if (document.getElementById('selfCheckInForm').style.display !== 'none') {
+          showExpiredScreen();
+        }
+      }, remainingMs);
+    }
+
+    function showSuccessScreen(guest, isAlready) {
+      try {
+        if (window.soundManager) {
+          window.soundManager.playCheckInSuccess();
+        }
+      } catch(s) {}
+
+      document.getElementById('selfCheckInForm').style.display = 'none';
+      document.getElementById('successScreen').style.display = 'block';
+
+      const card = document.getElementById('guestWelcomeCard');
+      card.innerHTML = `
+        <div style="font-size: 18px; font-weight: 800; color: var(--primary-forest); margin-bottom: 4px;">
+          ${guest.name}
+        </div>
+        <div style="font-size: 13px; color: var(--text-muted);">
+          ${guest.organization || '貴賓'} · ${guest.title || ''}
+        </div>
+        <div style="font-size: 12px; color: #888; margin-top: 6px;">
+          員工卡號/編號：<code>${guest.guestId}</code>
+          ${isAlready ? '<span style="color:#E67E22; margin-left:6px; font-weight:700;">(稍早前已完成報到)</span>' : ''}
+        </div>
+      `;
+
+      document.getElementById('guestTableNo').textContent = guest.tableNo || '未排桌';
+      document.getElementById('checkInTimeText').textContent = isAlready 
+        ? `報到狀態：已完成 (入場時間：${guest.checkedInAt ? new Date(guest.checkedInAt).toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' }) : '已簽到'})`
+        : `報到時間：${new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`;
+    }
+
+    async function handleSelfCheckInSubmit(e) {
+      e.preventDefault();
+      
+      // Strict screenshot check before submitting
+      if (isTokenExpired()) {
+        showExpiredScreen();
+        return;
+      }
+
+      const inputEl = document.getElementById('guestIdentifier');
+      const submitBtn = document.getElementById('submitBtn');
+      const rawValue = inputEl ? inputEl.value.trim() : '';
+
+      if (!rawValue) {
+        alert('請輸入員工卡號、編號或姓名');
+        return;
+      }
+
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<span>⏳ 正在驗證身分與簽到中...</span>';
+
+      const apiBase = getApiBase();
+      const currentEvId = eventId || 'event_20260917_084526';
+
+      try {
+        // Step 1: Try unified self-checkin API endpoint
+        const res = await fetch(`${apiBase}/events/${currentEvId}/self-checkin`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            token: token,
+            ts: qrTs,
+            identifier: rawValue
+          })
+        });
+
+        const result = await res.json().catch(() => ({}));
+
+        if (res.ok && result.success && result.guest) {
+          showSuccessScreen(result.guest, result.alreadyCheckedIn || false);
+          return;
+        }
+
+        // Token expired error from server
+        if (result.error === 'EXPIRED_QR_CODE' || (res.status === 400 && result.message && result.message.includes('過期'))) {
+          showExpiredScreen();
+          return;
+        }
+
+        // Guest not found error from server
+        if (result.error === 'GUEST_NOT_FOUND' || (result.message && result.message.includes('查無'))) {
+          alert(result.message);
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = '<span>🚀 確認自主報到</span>';
+          if (inputEl) { inputEl.select(); inputEl.focus(); }
+          return;
+        }
+
+        // Step 2: Fallback for legacy IIS server builds where /self-checkin returns 404/405
+        if (res.status === 404 || res.status === 405 || !res.ok) {
+          console.warn('Falling back to direct guest lookup and check-in endpoint...');
+          const guestsRes = await fetch(`${apiBase}/events/${currentEvId}/guests?t=${Date.now()}`);
+          if (guestsRes.ok) {
+            const guests = await guestsRes.json();
+            const cleanQuery = rawValue.replace(/^0+/, '') || '0';
+            
+            const target = guests.find(g => 
+              (g.guestId && g.guestId.toLowerCase() === rawValue.toLowerCase()) ||
+              (g.guestId && g.guestId.replace(/^0+/, '') === cleanQuery) ||
+              (g.name && g.name.toLowerCase() === rawValue.toLowerCase()) ||
+              (g.qrCodeHash && g.qrCodeHash.toLowerCase() === rawValue.toLowerCase()) ||
+              (g.phone && g.phone.endsWith(rawValue))
+            );
+
+            if (target) {
+              if (target.isCheckedIn) {
+                showSuccessScreen(target, true);
+                return;
+              }
+
+              // Perform toggle checkin
+              const toggleRes = await fetch(`${apiBase}/events/${currentEvId}/guests/${encodeURIComponent(target.guestId)}/checkin`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ isCheckedIn: true, updatedBy: '手機掃碼自主報到' })
+              });
+
+              if (toggleRes.ok) {
+                const updatedGuest = await toggleRes.json().catch(() => target);
+                showSuccessScreen(updatedGuest, false);
+                return;
+              }
+            } else {
+              alert(`⚠️ 查無與「${rawValue}」相符之貴賓名冊資料，請確認卡號或姓名！`);
+              submitBtn.disabled = false;
+              submitBtn.innerHTML = '<span>🚀 確認自主報到</span>';
+              if (inputEl) { inputEl.select(); inputEl.focus(); }
+              return;
+            }
+          }
+        }
+
+        if (result.message) {
+          alert(result.message);
+        } else {
+          alert('報到失敗，請確認卡號或姓名是否正確！');
+        }
+
+      } catch (err) {
+        console.error('Self checkin error:', err);
+        alert('連線異常，請確認網路連線或重新掃描最新動態條碼！');
+      }
+
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = '<span>🚀 確認自主報到</span>';
+      if (inputEl) {
+        inputEl.select();
+        inputEl.focus();
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', initSelfCheckIn);
+  </script>
+</body>
+</html>

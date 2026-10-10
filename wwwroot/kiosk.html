@@ -1,0 +1,1015 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>智慧活動 · 自助報到大螢幕 | InPoint Live Kiosk</title>
+  <link rel="stylesheet" href="css/style.css?v=20261006_06" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎯</text></svg>" />
+  <style>
+    /* Kiosk Big Screen Exclusive Premium Styles */
+    :root {
+      --kiosk-bg: radial-gradient(circle at 50% 15%, #144933 0%, #0a2419 75%, #05140e 100%);
+      --kiosk-glass: rgba(255, 255, 255, 0.08);
+      --kiosk-glass-hover: rgba(255, 255, 255, 0.14);
+      --kiosk-border: rgba(255, 255, 255, 0.16);
+      --kiosk-gold: #F1C40F;
+      --kiosk-green: #2ECC71;
+      --kiosk-cyan: #1ABC9C;
+    }
+
+    body {
+      background: var(--kiosk-bg);
+      color: #FFFFFF;
+      min-height: 100vh;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      overflow-x: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+      user-select: none;
+    }
+
+    /* Top Bar */
+    .kiosk-header {
+      padding: 16px 36px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+      backdrop-filter: blur(14px);
+      background: rgba(7, 28, 19, 0.75);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .kiosk-brand {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .kiosk-logo-mark {
+      width: 48px;
+      height: 48px;
+      background: linear-gradient(135deg, #2ECC71, #137547);
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      font-weight: 900;
+      color: #fff;
+      box-shadow: 0 4px 20px rgba(46, 204, 113, 0.4);
+      animation: pulseGlow 3s infinite ease-in-out;
+    }
+
+    @keyframes pulseGlow {
+      0%, 100% { box-shadow: 0 4px 20px rgba(46, 204, 113, 0.4); }
+      50% { box-shadow: 0 4px 28px rgba(46, 204, 113, 0.7); }
+    }
+
+    .kiosk-title h1 {
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+      color: #FFFFFF;
+      margin: 0;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .kiosk-title p {
+      font-size: 13px;
+      color: #A3D4BE;
+      margin: 2px 0 0 0;
+      letter-spacing: 0.3px;
+    }
+
+    .kiosk-tools {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .kiosk-event-tag {
+      background: rgba(46, 204, 113, 0.15);
+      border: 1px solid rgba(46, 204, 113, 0.45);
+      color: #58D68D;
+      padding: 7px 18px;
+      border-radius: 30px;
+      font-size: 14px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+      user-select: none;
+    }
+
+    .btn-kiosk-action {
+      background: rgba(255, 255, 255, 0.12);
+      border: 1px solid rgba(255, 255, 255, 0.22);
+      color: #FFFFFF;
+      padding: 8px 16px;
+      border-radius: 30px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 700;
+      transition: all 0.2s ease;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn-kiosk-action:hover {
+      background: rgba(255, 255, 255, 0.25);
+      border-color: rgba(255, 255, 255, 0.4);
+      transform: translateY(-1px);
+    }
+
+    /* Central Big Stage */
+    .kiosk-main {
+      flex: 1;
+      display: flex;
+      align-items: stretch;
+      justify-content: center;
+      padding: 24px 36px;
+      gap: 36px;
+      max-width: 1560px;
+      margin: 0 auto;
+      width: 100%;
+      box-sizing: border-box;
+    }
+
+    /* Left QR Showcase Card */
+    .kiosk-qr-card {
+      background: #FFFFFF;
+      color: #1A5E42;
+      border-radius: 28px;
+      padding: 32px 36px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5), 0 0 40px rgba(46, 204, 113, 0.2);
+      position: relative;
+      border: 4px solid #A0E2C1;
+      max-width: 460px;
+      width: 100%;
+      text-align: center;
+      box-sizing: border-box;
+    }
+
+    .kiosk-qr-card-header {
+      margin-bottom: 12px;
+    }
+
+    .kiosk-qr-card-header h2 {
+      font-size: 22px;
+      font-weight: 900;
+      color: #134933;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin: 0;
+    }
+
+    .kiosk-qr-card-header p {
+      font-size: 13.5px;
+      color: #4A6355;
+      margin-top: 6px;
+      font-weight: 600;
+    }
+
+    /* QR Code Container */
+    .kiosk-qr-viewport {
+      width: 270px;
+      height: 270px;
+      background: #FFFFFF;
+      border-radius: 20px;
+      padding: 10px;
+      box-shadow: 0 6px 24px rgba(0, 0, 0, 0.1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 10px 0;
+      border: 2px solid #E2EDE7;
+      position: relative;
+      box-sizing: border-box;
+    }
+
+    .kiosk-qr-viewport svg {
+      width: 100%;
+      height: 100%;
+      border-radius: 12px;
+      display: block;
+    }
+
+    /* 60-Second Countdown Bar */
+    .kiosk-timer-wrap {
+      width: 100%;
+      margin-top: 8px;
+    }
+
+    .kiosk-timer-info {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 13px;
+      font-weight: 800;
+      color: #134933;
+      margin-bottom: 6px;
+    }
+
+    .kiosk-timer-bar {
+      height: 10px;
+      width: 100%;
+      background: #E5ECE8;
+      border-radius: 20px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .kiosk-timer-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #2ECC71, #F39C12);
+      border-radius: 20px;
+      width: 100%;
+      transition: width 0.9s linear;
+    }
+
+    .kiosk-security-badge {
+      margin-top: 14px;
+      font-size: 12px;
+      font-weight: 700;
+      color: #4E685B;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: #EDF7F1;
+      padding: 8px 16px;
+      border-radius: 20px;
+      border: 1px solid #D2E8DC;
+    }
+
+    /* Right Live Attendance & Welcome Board */
+    .kiosk-live-board {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      max-width: 960px;
+    }
+
+    .kiosk-stats-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+    }
+
+    .kiosk-stat-card {
+      background: var(--kiosk-glass);
+      backdrop-filter: blur(14px);
+      border: 1px solid var(--kiosk-border);
+      border-radius: 22px;
+      padding: 18px 22px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+    }
+
+    .kiosk-stat-label {
+      font-size: 13.5px;
+      color: #A3D4BE;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .kiosk-stat-val {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-size: 38px;
+      font-weight: 900;
+      color: #FFFFFF;
+      margin-top: 6px;
+      line-height: 1;
+      display: flex;
+      align-items: baseline;
+      gap: 6px;
+    }
+
+    .kiosk-stat-val small {
+      font-size: 15px;
+      color: #A3D4BE;
+      font-weight: 600;
+    }
+
+    .kiosk-arrived-list-card {
+      background: var(--kiosk-glass);
+      backdrop-filter: blur(16px);
+      border: 1px solid var(--kiosk-border);
+      border-radius: 24px;
+      padding: 22px 26px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.3);
+      min-height: 400px;
+    }
+
+    .kiosk-arrived-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      padding-bottom: 12px;
+    }
+
+    .kiosk-arrived-title {
+      font-size: 18px;
+      font-weight: 800;
+      color: #F1C40F;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .kiosk-arrived-badge-count {
+      background: rgba(241, 196, 15, 0.2);
+      border: 1px solid rgba(241, 196, 15, 0.4);
+      color: #F39C12;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 12.5px;
+      font-weight: 700;
+    }
+
+    .kiosk-arrived-scroll {
+      flex: 1;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      max-height: 440px;
+      padding-right: 6px;
+    }
+
+    /* Custom scrollbar */
+    .kiosk-arrived-scroll::-webkit-scrollbar {
+      width: 6px;
+    }
+    .kiosk-arrived-scroll::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 10px;
+    }
+
+    .kiosk-guest-chip {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 16px;
+      padding: 12px 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      animation: slideInArrival 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+      transition: transform 0.2s ease, background 0.2s ease;
+    }
+
+    .kiosk-guest-chip:hover {
+      background: rgba(255, 255, 255, 0.14);
+      transform: translateX(4px);
+    }
+
+    @keyframes slideInArrival {
+      0% {
+        opacity: 0;
+        transform: translateY(-12px) scale(0.98);
+      }
+      100% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    .kiosk-guest-chip.is-vip1 {
+      background: linear-gradient(90deg, rgba(241, 196, 15, 0.2), rgba(255, 255, 255, 0.08));
+      border: 1.5px solid rgba(241, 196, 15, 0.55);
+      box-shadow: 0 4px 18px rgba(241, 196, 15, 0.15);
+    }
+
+    .kiosk-guest-chip.is-vip2 {
+      background: linear-gradient(90deg, rgba(230, 126, 34, 0.2), rgba(255, 255, 255, 0.08));
+      border: 1.5px solid rgba(230, 126, 34, 0.5);
+    }
+
+    .kiosk-guest-chip.is-vip3 {
+      background: linear-gradient(90deg, rgba(26, 188, 156, 0.2), rgba(255, 255, 255, 0.08));
+      border: 1.5px solid rgba(26, 188, 156, 0.45);
+    }
+
+    .kiosk-guest-info {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .kiosk-guest-name {
+      font-size: 18px;
+      font-weight: 800;
+      color: #FFFFFF;
+      letter-spacing: 0.5px;
+    }
+
+    .kiosk-rank-badge {
+      font-size: 11.5px;
+      font-weight: 800;
+      padding: 3px 8px;
+      border-radius: 6px;
+      letter-spacing: 0.3px;
+    }
+
+    .kiosk-rank-vip1 {
+      background: #F1C40F;
+      color: #5D4037;
+    }
+    .kiosk-rank-vip2 {
+      background: #E67E22;
+      color: #FFFFFF;
+    }
+    .kiosk-rank-vip3 {
+      background: #1ABC9C;
+      color: #0E3A2F;
+    }
+    .kiosk-rank-normal {
+      background: rgba(255, 255, 255, 0.2);
+      color: #E0E0E0;
+    }
+
+    .kiosk-guest-org {
+      font-size: 13.5px;
+      color: #A3D4BE;
+      font-weight: 500;
+    }
+
+    .kiosk-guest-meta {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .kiosk-table-badge {
+      font-size: 12.5px;
+      font-weight: 700;
+      color: #2ECC71;
+      background: rgba(46, 204, 113, 0.2);
+      border: 1px solid rgba(46, 204, 113, 0.4);
+      padding: 4px 10px;
+      border-radius: 8px;
+    }
+
+    .kiosk-time-badge {
+      font-size: 12px;
+      color: #A3D4BE;
+      background: rgba(0, 0, 0, 0.25);
+      padding: 4px 8px;
+      border-radius: 6px;
+    }
+
+    /* Footer */
+    .kiosk-footer {
+      padding: 14px 36px;
+      background: rgba(7, 28, 19, 0.85);
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 13px;
+      color: #A3D4BE;
+    }
+
+    @media (max-width: 1080px) {
+      .kiosk-main {
+        flex-direction: column;
+        align-items: center;
+        gap: 24px;
+        padding: 16px;
+      }
+      .kiosk-qr-card {
+        max-width: 100%;
+      }
+      .kiosk-live-board {
+        max-width: 100%;
+        width: 100%;
+      }
+      .kiosk-stats-row {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 1. Kiosk Top Bar -->
+  <header class="kiosk-header">
+    <div class="kiosk-brand">
+      <div class="kiosk-logo-mark">🎯</div>
+      <div class="kiosk-title">
+        <h1 id="kioskMainHeading">月烤月嗨 · 自助報到大螢幕</h1>
+        <p id="kioskSubHeading">InPoint Live Dynamic Check-in & Real-time Welcome Billboard</p>
+      </div>
+    </div>
+
+    <div class="kiosk-tools">
+      <div class="kiosk-event-tag" id="kioskEventBadge" title="當前報到活動場次">
+        <span>📅</span>
+        <span id="kioskEventNameDisplay" style="color: #FFFFFF; font-weight: 700; font-size: 14px;">月烤月嗨 (2026/9/17)</span>
+      </div>
+      <button type="button" class="btn-kiosk-action" onclick="toggleFullScreen()">⛶ 全螢幕投影</button>
+      <a href="index.html" class="btn-kiosk-action">← 返回後台</a>
+    </div>
+  </header>
+
+  <!-- 2. Central QR Code & Live Stats Area -->
+  <main class="kiosk-main">
+    
+    <!-- Left: 60-Second Dynamic Anti-Cheat QR Code -->
+    <div class="kiosk-qr-card">
+      <div class="kiosk-qr-card-header">
+        <h2><span>📱</span> 請掃描 QR Code 自助報到</h2>
+        <p>請使用手機相機或 LINE 掃碼即可一秒完成簽到</p>
+      </div>
+
+      <div class="kiosk-qr-viewport" id="kioskQrContainer">
+        <!-- Dynamic QR SVG generated by QRCodeLib -->
+        <div style="font-size: 14px; color: #888;">產生動態碼中...</div>
+      </div>
+
+      <!-- 60-Second Countdown Progress -->
+      <div class="kiosk-timer-wrap">
+        <div class="kiosk-timer-info">
+          <span>⏱️ 動態驗證安全碼</span>
+          <span id="kioskSecondsText">60 秒後刷新</span>
+        </div>
+        <div class="kiosk-timer-bar">
+          <div class="kiosk-timer-fill" id="kioskTimerFill"></div>
+        </div>
+      </div>
+
+      <div class="kiosk-security-badge">
+        <span>🛡️</span> 60 秒自動更新 · 防作弊遠端轉傳機制啟動中
+      </div>
+    </div>
+
+    <!-- Right: Realtime Attendance Stats & Arrived Guests -->
+    <div class="kiosk-live-board">
+      
+      <div class="kiosk-stats-row">
+        <div class="kiosk-stat-card">
+          <div class="kiosk-stat-label"><span>👥</span> 已完成報到</div>
+          <div class="kiosk-stat-val" id="kioskCheckedIn">155 <small>人到場</small></div>
+        </div>
+        <div class="kiosk-stat-card">
+          <div class="kiosk-stat-label"><span>📈</span> 現場即時出席率</div>
+          <div class="kiosk-stat-val" id="kioskAttendanceRate" style="color: #2ECC71;">93.4%</div>
+        </div>
+        <div class="kiosk-stat-card">
+          <div class="kiosk-stat-label"><span>👑</span> VIP 1~2 級到場率</div>
+          <div class="kiosk-stat-val" id="kioskVipRate" style="color: #F1C40F;">3 / 3 <small>位到齊</small></div>
+        </div>
+      </div>
+
+      <div class="kiosk-arrived-list-card">
+        <div class="kiosk-arrived-header">
+          <div class="kiosk-arrived-title">
+            <span>✨</span> 最新抵達貴賓與同仁 (<span id="kioskExpectedTotal">166</span> 人應到)
+          </div>
+          <div class="kiosk-arrived-badge-count" id="kioskArrivalsCountBadge">
+            已報到 155 人
+          </div>
+        </div>
+        <div class="kiosk-arrived-scroll" id="kioskArrivedList">
+          <!-- Dynamic live guests will be loaded here -->
+          <div style="color: rgba(255,255,255,0.6); text-align:center; padding: 30px;">
+            ⏳ 正在同步即時報到貴賓名單...
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- 3. Kiosk Footer -->
+  <footer class="kiosk-footer">
+    <div>📍 活動會場：<span id="kioskLocation" style="color: #FFFFFF; font-weight: 700;">彰化秀傳九樓會議廳</span></div>
+    <div>🗓️ 活動日期：<span id="kioskDate" style="color: #FFFFFF; font-weight: 700;">2026 年 9 月 17 日</span></div>
+    <div>🟢 多端即時連線同步中 ｜ 系統自動監控</div>
+  </footer>
+
+  <!-- Scripts -->
+  <script src="js/qrcode-lib.js?v=20261006_06"></script>
+  <script src="js/audio.js?v=20261006_06"></script>
+  <script>
+    let currentEventId = '';
+    let currentEventData = null;
+    let countdownSec = 60;
+    let timerInterval = null;
+    let currentToken = '';
+    let authToken = '';
+
+    // Smart Base Path Resolution
+    function getAppPaths() {
+      let pathname = window.location.pathname;
+      let base = pathname.substring(0, pathname.lastIndexOf('/') + 1);
+      if (!base.endsWith('/')) base += '/';
+      
+      return {
+        base: base,
+        apiBase: base + 'api',
+        selfCheckinUrl: window.location.origin + base + 'self-checkin.html'
+      };
+    }
+
+    function getAuthHeaders() {
+      const headers = {
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache'
+      };
+      if (authToken) {
+        headers['Authorization'] = `Bearer ${authToken}`;
+        headers['X-Auth-Token'] = authToken;
+      }
+      return headers;
+    }
+
+    // Client-side fallback dynamic token algorithm
+    function computeClientDynamicToken(eventId) {
+      const windowNum = Math.floor(Date.now() / 60000);
+      let str = (eventId || 'event') + '_' + windowNum;
+      let hash = 0;
+      for (let i = 0; i < str.length; i++) {
+        hash = ((hash << 5) - hash) + str.charCodeAt(i);
+        hash |= 0;
+      }
+      return Math.abs(hash).toString(16).padStart(8, '0') + (windowNum % 100000).toString(16);
+    }
+
+    // Render QR Code immediately
+    function renderQr(checkinUrl) {
+      const container = document.getElementById('kioskQrContainer');
+      if (container && window.QRCodeLib) {
+        window.QRCodeLib.renderSVG(checkinUrl, container, 250, '#000000');
+      }
+    }
+
+    // Initialize Kiosk Screen
+    async function initKiosk() {
+      const paths = getAppPaths();
+      const urlParams = new URLSearchParams(window.location.search);
+      
+      // 1. Resolve Auth Token from Storage or Query
+      authToken = urlParams.get('token') || sessionStorage.getItem('inpoint_token') || localStorage.getItem('inpoint_token') || '';
+      if (urlParams.get('token')) {
+        try { sessionStorage.setItem('inpoint_token', authToken); } catch(e){}
+      }
+
+      // 2. Resolve target Event ID
+      currentEventId = urlParams.get('eventId') || '';
+
+      // Immediately render first dynamic QR Code
+      const nowSec = Math.floor(Date.now() / 1000);
+      const initToken = computeClientDynamicToken(currentEventId || 'event_20260917_084526');
+      currentToken = initToken;
+      const initialCheckinUrl = `${paths.selfCheckinUrl}?eventId=${encodeURIComponent(currentEventId || 'event_20260917_084526')}&token=${encodeURIComponent(initToken)}&ts=${nowSec}`;
+      renderQr(initialCheckinUrl);
+
+      // Start 1-second Countdown loop
+      startTimer();
+
+      // 3. Load Events List
+      await loadEventsList();
+
+      // 4. Fetch dynamic QR and live arrivals
+      await fetchNewDynamicQr();
+      await fetchLiveStats();
+
+      // 5. Setup Live Polling Loop (every 3s)
+      setInterval(fetchLiveStats, 3000);
+
+      // 6. Broadcast Channel for instant local tab sync
+      if (typeof BroadcastChannel !== 'undefined') {
+        const channel = new BroadcastChannel('sc_checkin_realtime');
+        channel.onmessage = (msg) => {
+          if (msg && msg.data) {
+            fetchLiveStats();
+          }
+        };
+      }
+    }
+
+    async function loadEventsList() {
+      const paths = getAppPaths();
+      try {
+        let events = [];
+        
+        // Try public-list first, then fallback to events endpoint
+        const res = await fetch(`${paths.apiBase}/events/public-list?t=${Date.now()}`, {
+          headers: getAuthHeaders()
+        });
+
+        if (res.ok) {
+          events = await res.json();
+        } else {
+          const res2 = await fetch(`${paths.apiBase}/events?t=${Date.now()}`, {
+            headers: getAuthHeaders()
+          });
+          if (res2.ok) events = await res2.json();
+        }
+
+        if (events && events.length > 0) {
+          // If no currentEventId or not found, pick active event or "月烤月嗨"
+          if (!currentEventId) {
+            const foundMoon = events.find(e => e.eventName && e.eventName.includes('月烤月嗨'));
+            const active = foundMoon || events.find(e => e.isActive) || events[0];
+            currentEventId = active.eventId;
+          }
+
+          const activeEv = events.find(e => e.eventId === currentEventId) || events[0];
+          if (activeEv) {
+            updateEventHeaderAndFooter(activeEv);
+          }
+        } else {
+          // Fallback static single event option
+          currentEventId = currentEventId || 'event_20260917_084526';
+          updateEventHeaderAndFooter({
+            eventId: 'event_20260917_084526',
+            eventName: '月烤月嗨',
+            eventDate: '2026-09-17T09:00:00',
+            location: '彰化秀傳九樓會議廳'
+          });
+        }
+      } catch (err) {
+        console.warn('Load events list warning:', err);
+        currentEventId = currentEventId || 'event_20260917_084526';
+      }
+    }
+
+    function updateEventHeaderAndFooter(ev) {
+      if (!ev) return;
+      currentEventData = ev;
+      
+      const headEl = document.getElementById('kioskMainHeading');
+      if (headEl) headEl.textContent = `${ev.eventName} · 自助報到大螢幕`;
+
+      const badgeNameEl = document.getElementById('kioskEventNameDisplay');
+      if (badgeNameEl) {
+        const dateStr = ev.eventDate ? new Date(ev.eventDate).toLocaleDateString('zh-TW', { year: 'numeric', month: 'numeric', day: 'numeric' }) : '';
+        badgeNameEl.textContent = dateStr ? `${ev.eventName} (${dateStr})` : ev.eventName;
+      }
+
+      const locEl = document.getElementById('kioskLocation');
+      if (locEl) locEl.textContent = ev.location || '彰化秀傳九樓會議廳';
+
+      const dateEl = document.getElementById('kioskDate');
+      if (dateEl && ev.eventDate) {
+        const d = new Date(ev.eventDate);
+        dateEl.textContent = `${d.getFullYear()} 年 ${d.getMonth() + 1} 月 ${d.getDate()} 日`;
+      }
+    }
+
+    function startTimer() {
+      if (timerInterval) clearInterval(timerInterval);
+      timerInterval = setInterval(() => {
+        countdownSec--;
+        const fill = document.getElementById('kioskTimerFill');
+        const secText = document.getElementById('kioskSecondsText');
+        
+        if (fill) fill.style.width = `${Math.max(0, (countdownSec / 60)) * 100}%`;
+        if (secText) secText.textContent = `${Math.max(0, countdownSec)} 秒後刷新`;
+
+        if (countdownSec <= 0) {
+          countdownSec = 60;
+          fetchNewDynamicQr();
+          fetchLiveStats();
+        }
+      }, 1000);
+    }
+
+    async function fetchNewDynamicQr() {
+      const paths = getAppPaths();
+      const eventId = currentEventId || 'event_20260917_084526';
+      let token = '';
+      let nowSec = Math.floor(Date.now() / 1000);
+      let remaining = 60 - (nowSec % 60);
+      if (remaining <= 0) remaining = 60;
+
+      try {
+        const res = await fetch(`${paths.apiBase}/events/${eventId}/dynamic-qr-token?t=${Date.now()}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.token) {
+            token = data.token;
+            if (data.ts) nowSec = data.ts;
+            if (data.remainingSeconds) remaining = data.remainingSeconds;
+          }
+        }
+      } catch (e) {
+        console.warn('fetch dynamic token from server fallback to client:', e);
+      }
+
+      if (!token) {
+        token = computeClientDynamicToken(eventId);
+      }
+
+      currentToken = token;
+      countdownSec = remaining;
+
+      const checkinUrl = `${paths.selfCheckinUrl}?eventId=${encodeURIComponent(eventId)}&token=${encodeURIComponent(token)}&ts=${nowSec}`;
+      renderQr(checkinUrl);
+    }
+
+    async function fetchLiveStats() {
+      const eventId = currentEventId || 'event_20260917_084526';
+      const paths = getAppPaths();
+      
+      try {
+        // Method 1: Unified Kiosk Feed endpoint
+        const feedRes = await fetch(`${paths.apiBase}/events/${eventId}/kiosk-feed?t=${Date.now()}`, {
+          headers: getAuthHeaders()
+        });
+
+        if (feedRes.ok) {
+          const feed = await feedRes.json();
+          if (feed) {
+            renderKioskFeedData(feed);
+            return;
+          }
+        }
+
+        // Method 2: Fallback to stats & guests endpoints
+        const [statsRes, guestsRes] = await Promise.all([
+          fetch(`${paths.apiBase}/events/${eventId}/stats?t=${Date.now()}`, { headers: getAuthHeaders() }),
+          fetch(`${paths.apiBase}/events/${eventId}/guests?t=${Date.now()}`, { headers: getAuthHeaders() })
+        ]);
+
+        let stats = null;
+        let guests = null;
+
+        if (statsRes.ok) stats = await statsRes.json();
+        if (guestsRes.ok) guests = await guestsRes.json();
+
+        if (stats) {
+          renderStatsOnly(stats);
+        }
+
+        if (guests) {
+          const arrived = guests.filter(g => g.isCheckedIn).sort((a, b) => {
+            const timeA = a.checkedInAt ? new Date(a.checkedInAt).getTime() : 0;
+            const timeB = b.checkedInAt ? new Date(b.checkedInAt).getTime() : 0;
+            return timeB - timeA;
+          });
+          renderArrivalsList(arrived, stats ? stats.totalGuests : guests.length);
+        }
+
+      } catch (e) {
+        console.warn('fetchLiveStats error:', e);
+      }
+    }
+
+    function renderKioskFeedData(feed) {
+      if (!feed) return;
+
+      if (feed.stats) {
+        renderStatsOnly(feed.stats);
+      }
+
+      if (feed.location && document.getElementById('kioskLocation')) {
+        document.getElementById('kioskLocation').textContent = feed.location;
+      }
+      if (feed.eventName && document.getElementById('kioskMainHeading')) {
+        document.getElementById('kioskMainHeading').textContent = `${feed.eventName} · 自助報到大螢幕`;
+      }
+
+      const arrivals = feed.recentArrivals || [];
+      const total = feed.stats ? feed.stats.totalGuests : arrivals.length;
+      renderArrivalsList(arrivals, total);
+    }
+
+    function renderStatsOnly(stats) {
+      const checkedInEl = document.getElementById('kioskCheckedIn');
+      const rateEl = document.getElementById('kioskAttendanceRate');
+      const expectedEl = document.getElementById('kioskExpectedTotal');
+      const countBadgeEl = document.getElementById('kioskArrivalsCountBadge');
+      const vipRateEl = document.getElementById('kioskVipRate');
+
+      if (checkedInEl) checkedInEl.innerHTML = `${stats.checkedInCount} <small>人到場</small>`;
+      if (rateEl) rateEl.textContent = `${stats.attendanceRate}%`;
+      if (expectedEl) expectedEl.textContent = stats.totalGuests;
+      if (countBadgeEl) countBadgeEl.textContent = `已報到 ${stats.checkedInCount} 人`;
+
+      if (vipRateEl && stats.vip1Count !== undefined) {
+        const vipTotal = (stats.vip1Count || 0) + (stats.vip2Count || 0);
+        const vipChecked = (stats.vip1CheckedIn || 0) + (stats.vip2CheckedIn || 0);
+        vipRateEl.innerHTML = `${vipChecked} / ${vipTotal} <small>位${vipChecked >= vipTotal && vipTotal > 0 ? '到齊' : '等席'}</small>`;
+      }
+    }
+
+    function renderArrivalsList(arrivedGuests, totalExpected) {
+      const listCont = document.getElementById('kioskArrivedList');
+      if (!listCont) return;
+
+      if (!arrivedGuests || arrivedGuests.length === 0) {
+        listCont.innerHTML = `
+          <div style="color: rgba(255,255,255,0.6); text-align: center; padding: 40px 20px;">
+            <div style="font-size: 32px; margin-bottom: 8px;">📲</div>
+            <div style="font-size: 15px; font-weight: 700;">尚未有貴賓報到</div>
+            <div style="font-size: 13px; color: #A3D4BE; margin-top: 4px;">敬請掃描左方動態 QR Code 進行現場自主報到！</div>
+          </div>
+        `;
+        return;
+      }
+
+      listCont.innerHTML = arrivedGuests.map(g => {
+        const rank = g.rankWeight !== undefined ? g.rankWeight : 4;
+        let vipClass = '';
+        let rankBadge = '';
+
+        if (rank === 1) {
+          vipClass = 'is-vip1';
+          rankBadge = `<span class="kiosk-rank-badge kiosk-rank-vip1">👑 院長/局長 (VIP-1)</span>`;
+        } else if (rank === 2) {
+          vipClass = 'is-vip2';
+          rankBadge = `<span class="kiosk-rank-badge kiosk-rank-vip2">⭐ 副院長/民代 (VIP-2)</span>`;
+        } else if (rank === 3) {
+          vipClass = 'is-vip3';
+          rankBadge = `<span class="kiosk-rank-badge kiosk-rank-vip3">🎓 科部主任/教授</span>`;
+        } else {
+          rankBadge = `<span class="kiosk-rank-badge kiosk-rank-normal">👤 貴賓同仁</span>`;
+        }
+
+        const tableText = g.tableNo ? `🍽️ 席位：${escapeHtml(g.tableNo)}` : '🍽️ 未排桌';
+        
+        // Format check-in time nicely
+        let timeStr = '已完成報到';
+        if (g.checkedInAt) {
+          const d = new Date(g.checkedInAt);
+          timeStr = `⏱️ ${d.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`;
+        }
+
+        const staffText = g.checkedInBy ? `<span style="font-size:11px; opacity:0.8; margin-left:4px;">(${escapeHtml(g.checkedInBy)})</span>` : '';
+
+        return `
+          <div class="kiosk-guest-chip ${vipClass}">
+            <div class="kiosk-guest-info">
+              ${rankBadge}
+              <div class="kiosk-guest-name">${escapeHtml(g.name)}</div>
+              <div class="kiosk-guest-org">
+                ${escapeHtml(g.organization || '')} ${g.title ? '· ' + escapeHtml(g.title) : ''}
+              </div>
+            </div>
+            <div class="kiosk-guest-meta">
+              <span class="kiosk-table-badge">${tableText}</span>
+              <span class="kiosk-time-badge">${timeStr} ${staffText}</span>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    function toggleFullScreen() {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(err => {
+          alert(`無法進入全螢幕模式: ${err.message}`);
+        });
+      } else {
+        if (document.exitFullscreen) {
+          document.exitFullscreen();
+        }
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', initKiosk);
+  </script>
+</body>
+</html>
