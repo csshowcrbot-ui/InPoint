@@ -220,9 +220,31 @@ class CheckInApp {
 
         window.apiService.on('dataSynced', (data) => {
             if (data.eventId === this.currentEventId && data.guests) {
+                const newlyCheckedIn = data.guests.filter(g => {
+                    const gId = g.guestId || g.GuestId;
+                    const old = this.guests.find(og => (og.guestId || og.GuestId) === gId);
+                    const isNewChecked = g.isCheckedIn || g.IsCheckedIn;
+                    const wasOldChecked = old ? (old.isCheckedIn || old.IsCheckedIn) : false;
+                    return isNewChecked && !wasOldChecked;
+                });
+
                 this.guests = data.guests;
                 this.updateStatsLocally();
                 this.renderAllViews();
+
+                if (newlyCheckedIn.length > 0) {
+                    newlyCheckedIn.forEach(guest => {
+                        const name = guest.name || guest.Name;
+                        const rank = guest.rankWeight || guest.RankWeight || 4;
+                        if (rank <= 2) {
+                            if (window.soundManager) window.soundManager.playVipFanfare();
+                            this.showVipArrivalToast(guest);
+                        } else {
+                            if (window.soundManager) window.soundManager.playCheckInSuccess();
+                        }
+                        this.showToast(`📱 手機掃碼自主報到：【${name}】已完成簽到！`, 'success');
+                    });
+                }
             }
         });
     }

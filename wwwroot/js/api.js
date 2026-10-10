@@ -140,18 +140,17 @@ class ApiService {
     startCrossDeviceSync(getEventIdFn) {
         if (this._syncInterval) clearInterval(this._syncInterval);
         this._syncInterval = setInterval(async () => {
-            if (!this.token) return;
             const eventId = getEventIdFn();
             if (!eventId) return;
             try {
-                // 1. Sync guests for current active event
+                // 1. Sync guests for current active event (1s polling)
                 const guestsRes = await fetch(`${this.apiBase}api/events/${encodeURIComponent(eventId)}/guests?_t=${Date.now()}`, {
                     cache: 'no-store',
                     headers: this.getAuthHeaders()
                 });
                 if (guestsRes.ok) {
                     const list = await guestsRes.json();
-                    const newHash = JSON.stringify(list.map(g => [g.guestId, g.isCheckedIn, g.name, g.tableNo, g.rankWeight]));
+                    const newHash = JSON.stringify(list.map(g => [g.guestId || g.GuestId, g.isCheckedIn || g.IsCheckedIn, g.name || g.Name, g.tableNo || g.TableNo, g.rankWeight || g.RankWeight]));
                     if (this._lastGuestsHash && this._lastGuestsHash !== newHash) {
                         this.dispatchLocalEvent('dataSynced', { eventId, guests: list });
                     }
@@ -165,14 +164,14 @@ class ApiService {
                 });
                 if (eventsRes.ok) {
                     const eventsList = await eventsRes.json();
-                    const newEventsHash = JSON.stringify(eventsList.map(e => [e.eventId, e.eventName, e.isActive]));
+                    const newEventsHash = JSON.stringify(eventsList.map(e => [e.eventId || e.EventId, e.eventName || e.EventName, e.isActive ?? e.IsActive]));
                     if (this._lastEventsHash && this._lastEventsHash !== newEventsHash) {
                         this.dispatchLocalEvent('eventChanged', { events: eventsList });
                     }
                     this._lastEventsHash = newEventsHash;
                 }
             } catch (e) {}
-        }, 2500);
+        }, 1000);
     }
 
     // --- Authentication APIs ---
