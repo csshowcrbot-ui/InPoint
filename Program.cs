@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 using ShowChwanCheckIn.Data;
 using ShowChwanCheckIn.Hubs;
 using ShowChwanCheckIn.Models;
@@ -12,8 +13,18 @@ var builder = WebApplication.CreateBuilder(args);
 var rawConnStr = builder.Configuration.GetConnectionString("DefaultConnection");
 var activeConnStr = ResolveWorkingConnectionString(rawConnStr);
 bool useSql = !string.IsNullOrWhiteSpace(activeConnStr);
+bool isPostgres = useSql && (activeConnStr.StartsWith("postgres://") || activeConnStr.StartsWith("postgresql://") || activeConnStr.Contains("Host="));
 
-if (useSql)
+if (isPostgres)
+{
+    var pgConnStr = ConvertPostgresUrlToConnectionString(activeConnStr);
+    builder.Services.AddDbContextFactory<AppDbContext>(options =>
+    {
+        options.UseNpgsql(pgConnStr);
+    });
+    builder.Services.AddSingleton<IEventService, SqlEventService>();
+}
+else if (useSql)
 {
     builder.Services.AddDbContextFactory<AppDbContext>(options =>
     {
@@ -158,10 +169,37 @@ if (useSql)
     }
 }
 
+static string ConvertPostgresUrlToConnectionString(string url)
+{
+    if (url.StartsWith("postgres://") || url.StartsWith("postgresql://"))
+    {
+        try
+        {
+            var uri = new Uri(url);
+            var userInfo = uri.UserInfo.Split(':');
+            var username = userInfo.Length > 0 ? Uri.UnescapeDataString(userInfo[0]) : "";
+            var password = userInfo.Length > 1 ? Uri.UnescapeDataString(userInfo[1]) : "";
+            var db = uri.AbsolutePath.TrimStart('/');
+            var host = uri.Host;
+            var port = uri.Port > 0 ? uri.Port : 5432;
+
+            return $"Host={host};Port={port};Database={db};Username={username};Password={password};";
+        }
+        catch
+        {
+            return url;
+        }
+    }
+    return url;
+}
+
 static string ResolveWorkingConnectionString(string? rawConnStr)
 {
     if (string.IsNullOrWhiteSpace(rawConnStr) || rawConnStr.Contains("YOUR_SERVER_NAME"))
         return string.Empty;
+
+    if (rawConnStr.StartsWith("postgres://") || rawConnStr.StartsWith("postgresql://") || rawConnStr.Contains("Host="))
+        return rawConnStr;
 
     var serverCandidates = new List<string>();
     var match = System.Text.RegularExpressions.Regex.Match(rawConnStr, @"Server=([^;]+)", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
