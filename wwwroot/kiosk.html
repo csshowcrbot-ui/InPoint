@@ -535,6 +535,7 @@
         <span>📅</span>
         <span id="kioskEventNameDisplay" style="color: #FFFFFF; font-weight: 700; font-size: 14px;">月烤月嗨 (2026/9/17)</span>
       </div>
+      <button type="button" class="btn-kiosk-action btn-kiosk-mask is-masked" id="kioskMaskToggleBtn" onclick="toggleKioskNameMask()" title="姓名遮蔽切換（點擊切換開啟/關閉）">🔒 姓名遮蔽：開啟</button>
       <button type="button" class="btn-kiosk-action" onclick="toggleFullScreen()">⛶ 全螢幕投影</button>
       <a href="index.html" class="btn-kiosk-action">← 返回後台</a>
     </div>
@@ -675,6 +676,7 @@
 
     // Initialize Kiosk Screen
     async function initKiosk() {
+      updateKioskMaskButton();
       const paths = getAppPaths();
       const urlParams = new URLSearchParams(window.location.search);
       
@@ -973,7 +975,7 @@
           <div class="kiosk-guest-chip ${vipClass}">
             <div class="kiosk-guest-info">
               ${rankBadge}
-              <div class="kiosk-guest-name">${escapeHtml(g.name)}</div>
+              <div class="kiosk-guest-name">${escapeHtml(maskName(g.name))}</div>
               <div class="kiosk-guest-org">
                 ${escapeHtml(g.organization || '')} ${g.title ? '· ' + escapeHtml(g.title) : ''}
               </div>
@@ -985,6 +987,47 @@
           </div>
         `;
       }).join('');
+    }
+
+    let isNameMasked = localStorage.getItem('inpoint_name_masked') !== 'false';
+
+    function maskName(name) {
+      if (!name || typeof name !== 'string') return name || '';
+      if (!isNameMasked) return name;
+
+      const str = name.trim();
+      if (str.length <= 1) return str;
+      if (str.length === 2) {
+        return str[0] + '*';
+      }
+      if (str.length === 3) {
+        return str[0] + '*' + str[2];
+      }
+      if (str.length === 4) {
+        return str[0] + '**' + str[3];
+      }
+      return str[0] + '*'.repeat(str.length - 2) + str[str.length - 1];
+    }
+
+    function toggleKioskNameMask() {
+      isNameMasked = !isNameMasked;
+      localStorage.setItem('inpoint_name_masked', isNameMasked ? 'true' : 'false');
+      updateKioskMaskButton();
+      if (currentEventData && currentEventData.arrivedGuests) {
+        renderArrivedGuestsStream(currentEventData.arrivedGuests);
+      }
+    }
+
+    function updateKioskMaskButton() {
+      const btn = document.getElementById('kioskMaskToggleBtn');
+      if (!btn) return;
+      if (isNameMasked) {
+        btn.innerHTML = '🔒 姓名遮蔽：開啟';
+        btn.classList.add('is-masked');
+      } else {
+        btn.innerHTML = '👁️ 顯示全名';
+        btn.classList.remove('is-masked');
+      }
     }
 
     function escapeHtml(str) {

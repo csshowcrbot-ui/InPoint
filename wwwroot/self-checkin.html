@@ -389,7 +389,7 @@
       const card = document.getElementById('guestWelcomeCard');
       card.innerHTML = `
         <div style="font-size: 18px; font-weight: 800; color: var(--primary-forest); margin-bottom: 4px;">
-          ${guest.name}
+          ${maskName(guest.name)}
         </div>
         <div style="font-size: 13px; color: var(--text-muted);">
           ${guest.organization || '貴賓'} · ${guest.title || ''}
@@ -404,6 +404,19 @@
       document.getElementById('checkInTimeText').textContent = isAlready 
         ? `報到狀態：已完成 (入場時間：${guest.checkedInAt ? new Date(guest.checkedInAt).toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' }) : '已簽到'})`
         : `報到時間：${new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`;
+    }
+
+    function maskName(name) {
+      if (!name || typeof name !== 'string') return name || '';
+      const isNameMasked = localStorage.getItem('inpoint_name_masked') !== 'false';
+      if (!isNameMasked) return name;
+
+      const str = name.trim();
+      if (str.length <= 1) return str;
+      if (str.length === 2) return str[0] + '*';
+      if (str.length === 3) return str[0] + '*' + str[2];
+      if (str.length === 4) return str[0] + '**' + str[3];
+      return str[0] + '*'.repeat(str.length - 2) + str[str.length - 1];
     }
 
     async function handleSelfCheckInSubmit(e) {
