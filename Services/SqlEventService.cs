@@ -318,7 +318,7 @@ public class SqlEventService : IEventService
         guest.IsCheckedIn = newStatus;
         if (newStatus)
         {
-            guest.CheckedInAt = DateTime.Now;
+            guest.CheckedInAt = DateTime.UtcNow;
             guest.CheckedInBy = staffName;
         }
         else

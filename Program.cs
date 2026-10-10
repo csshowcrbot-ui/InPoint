@@ -53,7 +53,7 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
-// Database Table Auto-Creation / Migration for SQL Server
+// Database Table Auto-Creation / Migration for SQL Server or PostgreSQL
 if (useSql)
 {
     try
@@ -62,106 +62,206 @@ if (useSql)
         using var db = factory.CreateDbContext();
         db.Database.EnsureCreated();
 
-        // Ensure checkInUsers table and OwnerUsername column exist in SQL
-        using var conn = new SqlConnection(activeConnStr);
-        conn.Open();
+        if (isPostgres)
+        {
+            if (!db.Users.Any(u => u.Username == "admin"))
+            {
+                db.Users.Add(new User
+                {
+                    UserId = "user_admin",
+                    Username = "admin",
+                    PasswordHash = InMemoryEventService.HashPassword("ZiEiHrpPq@"),
+                    Role = "Admin",
+                    DisplayName = "系統最高管理員",
+                    Organization = "InPoint 核心管理中心",
+                    PlanType = "Unlimited",
+                    MaxGuestsPerEvent = 99999,
+                    MaxEvents = -1,
+                    IsActive = true,
+                    CreatedAt = DateTime.UtcNow,
+                    Notes = "預設系統管理員"
+                });
+            }
 
-        var ddlSql = @"
-        IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'checkInUsers')
-        BEGIN
-            CREATE TABLE [checkInUsers] (
-                [UserId] NVARCHAR(100) NOT NULL PRIMARY KEY,
-                [Username] NVARCHAR(100) NOT NULL,
-                [PasswordHash] NVARCHAR(255) NOT NULL,
-                [Role] NVARCHAR(50) NOT NULL,
-                [DisplayName] NVARCHAR(100) NULL,
-                [Organization] NVARCHAR(200) NULL,
-                [PlanType] NVARCHAR(50) NULL,
-                [ExpireAt] DATETIME2 NULL,
-                [MaxGuestsPerEvent] INT NOT NULL DEFAULT 500,
-                [MaxEvents] INT NOT NULL DEFAULT 1,
-                [IsActive] BIT NOT NULL DEFAULT 1,
-                [CreatedAt] DATETIME2 NOT NULL DEFAULT GETUTCDATE(),
-                [Notes] NVARCHAR(1000) NULL
-            );
-            CREATE UNIQUE INDEX [IX_checkInUsers_Username] ON [checkInUsers]([Username]);
-        END
+            if (!db.Users.Any(u => u.Username == "single_demo"))
+            {
+                db.Users.Add(new User
+                {
+                    UserId = "user_single_demo",
+                    Username = "single_demo",
+                    PasswordHash = InMemoryEventService.HashPassword("123456"),
+                    Role = "Member",
+                    DisplayName = "陳專員 (單場活動試用)",
+                    Organization = "前瞻生醫研發中心",
+                    PlanType = "SingleEvent",
+                    ExpireAt = DateTime.UtcNow.AddDays(7),
+                    MaxGuestsPerEvent = 500,
+                    MaxEvents = 1,
+                    IsActive = true,
+                    CreatedAt = DateTime.UtcNow,
+                    Notes = "單場活動 7 天授權體驗帳號"
+                });
+            }
 
-        IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('checkInEvents') AND name = 'OwnerUsername')
-        BEGIN
-            ALTER TABLE [checkInEvents] ADD [OwnerUsername] NVARCHAR(100) NULL;
-        END
-        ";
+            if (!db.Users.Any(u => u.Username == "annual_demo"))
+            {
+                db.Users.Add(new User
+                {
+                    UserId = "user_annual_demo",
+                    Username = "annual_demo",
+                    PasswordHash = InMemoryEventService.HashPassword("123456"),
+                    Role = "Member",
+                    DisplayName = "林主任 (機構年度專案)",
+                    Organization = "秀傳醫療體系 - 營運管理部",
+                    PlanType = "AnnualOrg",
+                    ExpireAt = DateTime.UtcNow.AddYears(1),
+                    MaxGuestsPerEvent = 1500,
+                    MaxEvents = -1,
+                    IsActive = true,
+                    CreatedAt = DateTime.UtcNow,
+                    Notes = "機構年度方案完整功能帳號"
+                });
+            }
 
-        using var cmd = new SqlCommand(ddlSql, conn);
-        cmd.ExecuteNonQuery();
+            db.SaveChanges();
 
-        // Seed default admin and demo members in SQL if missing
-        var seedUsersSql = @"
-        IF NOT EXISTS (SELECT 1 FROM [checkInUsers] WHERE [Username] = 'admin')
-        BEGIN
-            INSERT INTO [checkInUsers] ([UserId], [Username], [PasswordHash], [Role], [DisplayName], [Organization], [PlanType], [ExpireAt], [MaxGuestsPerEvent], [MaxEvents], [IsActive], [CreatedAt], [Notes])
-            VALUES ('user_admin', 'admin', @AdminPass, 'Admin', N'系統最高管理員', N'InPoint 核心管理中心', 'Unlimited', NULL, 99999, -1, 1, GETUTCDATE(), N'預設系統管理員');
-        END
+            if (!db.Events.Any())
+            {
+                var targetEventId = "event_20260917_084526";
+                db.Events.Add(new Event
+                {
+                    EventId = targetEventId,
+                    EventName = "月烤月嗨",
+                    EventDate = new DateTime(2026, 9, 17, 9, 0, 0, DateTimeKind.Utc),
+                    Location = "後山停車場",
+                    Description = "2026 秀傳中秋同樂烤肉聯歡大會",
+                    IsActive = true,
+                    CreatedAt = DateTime.UtcNow,
+                    OwnerUsername = "single_demo"
+                });
+                db.SaveChanges();
 
-        IF NOT EXISTS (SELECT 1 FROM [checkInUsers] WHERE [Username] = 'single_demo')
-        BEGIN
-            INSERT INTO [checkInUsers] ([UserId], [Username], [PasswordHash], [Role], [DisplayName], [Organization], [PlanType], [ExpireAt], [MaxGuestsPerEvent], [MaxEvents], [IsActive], [CreatedAt], [Notes])
-            VALUES ('user_single_demo', 'single_demo', @DemoPass, 'Member', N'陳專員 (單場活動試用)', N'前瞻生醫研發中心', 'SingleEvent', DATEADD(day, 7, GETUTCDATE()), 500, 1, 1, GETUTCDATE(), N'單場活動 7 天授權體驗帳號');
-        END
+                if (!db.Guests.Any(g => g.EventId == targetEventId))
+                {
+                    db.Guests.AddRange(new[]
+                    {
+                        new Guest { EventId = targetEventId, GuestId = "00601441", Name = "黃院長", Organization = "秀傳紀念醫院", Title = "院長", RankWeight = 1, TableNo = "VIP-1 主桌", IsCheckedIn = true, CheckedInAt = DateTime.UtcNow.AddMinutes(-35), CheckedInBy = "櫃檯報到處", QrCodeHash = "SC-2026-00601441", Phone = "0922-111-222", Notes = "大會主席" },
+                        new Guest { EventId = targetEventId, GuestId = "00601442", Name = "張副院長", Organization = "彰濱秀傳紀念醫院", Title = "副院長", RankWeight = 2, TableNo = "VIP-2 貴賓席", IsCheckedIn = true, CheckedInAt = DateTime.UtcNow.AddMinutes(-25), CheckedInBy = "櫃檯報到處", QrCodeHash = "SC-2026-00601442", Phone = "0988-999-000", Notes = "座談引言人" },
+                        new Guest { EventId = targetEventId, GuestId = "00601443", Name = "李議員", Organization = "彰化縣議會", Title = "議員", RankWeight = 2, TableNo = "VIP-2 貴賓席", IsCheckedIn = true, CheckedInAt = DateTime.UtcNow.AddMinutes(-20), CheckedInBy = "櫃檯報到處", QrCodeHash = "SC-2026-00601443", Phone = "0933-555-777", Notes = "特邀指導貴賓" },
+                        new Guest { EventId = targetEventId, GuestId = "00601444", Name = "陳主任", Organization = "心血管醫學部", Title = "主任", RankWeight = 3, TableNo = "第 3 組 (12桌)", IsCheckedIn = true, CheckedInAt = DateTime.UtcNow.AddMinutes(-15), CheckedInBy = "櫃檯報到處", QrCodeHash = "SC-2026-00601444", Phone = "0955-667-788", Notes = "專題座談代表" },
+                        new Guest { EventId = targetEventId, GuestId = "00601445", Name = "林組長", Organization = "資訊科技處", Title = "組長", RankWeight = 3, TableNo = "第 3 組 (12桌)", IsCheckedIn = false, CheckedInAt = null, CheckedInBy = null, QrCodeHash = "SC-2026-00601445", Phone = "0966-778-899", Notes = "系統維運代表" },
+                        new Guest { EventId = targetEventId, GuestId = "00601446", Name = "趙管理師", Organization = "品質管理中心", Title = "資深管理師", RankWeight = 4, TableNo = "第 5 組 (15桌)", IsCheckedIn = true, CheckedInAt = DateTime.UtcNow.AddMinutes(-10), CheckedInBy = "櫃檯報到處", QrCodeHash = "SC-2026-00601446", Phone = "0977-889-900", Notes = "同仁代表" },
+                        new Guest { EventId = targetEventId, GuestId = "00601447", Name = "孫專員", Organization = "醫療企劃部", Title = "專員", RankWeight = 4, TableNo = "第 5 組 (15桌)", IsCheckedIn = true, CheckedInAt = DateTime.UtcNow.AddMinutes(-8), CheckedInBy = "櫃檯報到處", QrCodeHash = "SC-2026-00601447", Phone = "0912-333-444", Notes = "企劃同仁" },
+                        new Guest { EventId = targetEventId, GuestId = "00601448", Name = "郭工程師", Organization = "醫工部", Title = "工程師", RankWeight = 4, TableNo = "第 6 組 (18桌)", IsCheckedIn = false, CheckedInAt = null, CheckedInBy = null, QrCodeHash = "SC-2026-00601448", Phone = "0922-444-555", Notes = "醫工同仁" }
+                    });
+                    db.SaveChanges();
+                }
+            }
+            Console.WriteLine("[PostgreSQL DB] Tables and Seed data initialized successfully.");
+        }
+        else
+        {
+            // Ensure checkInUsers table and OwnerUsername column exist in SQL Server
+            using var conn = new SqlConnection(activeConnStr);
+            conn.Open();
 
-        IF NOT EXISTS (SELECT 1 FROM [checkInUsers] WHERE [Username] = 'annual_demo')
-        BEGIN
-            INSERT INTO [checkInUsers] ([UserId], [Username], [PasswordHash], [Role], [DisplayName], [Organization], [PlanType], [ExpireAt], [MaxGuestsPerEvent], [MaxEvents], [IsActive], [CreatedAt], [Notes])
-            VALUES ('user_annual_demo', 'annual_demo', @DemoPass, 'Member', N'林主任 (機構年度專案)', N'秀傳醫療體系 - 營運管理部', 'AnnualOrg', DATEADD(year, 1, GETUTCDATE()), 1500, -1, 1, GETUTCDATE(), N'機構年度方案完整功能帳號');
-        END
-        ";
-        using var seedCmd = new SqlCommand(seedUsersSql, conn);
-        seedCmd.Parameters.AddWithValue("@AdminPass", InMemoryEventService.HashPassword("ZiEiHrpPq@"));
-        seedCmd.Parameters.AddWithValue("@DemoPass", InMemoryEventService.HashPassword("123456"));
-        seedCmd.ExecuteNonQuery();
+            var ddlSql = @"
+            IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'checkInUsers')
+            BEGIN
+                CREATE TABLE [checkInUsers] (
+                    [UserId] NVARCHAR(100) NOT NULL PRIMARY KEY,
+                    [Username] NVARCHAR(100) NOT NULL,
+                    [PasswordHash] NVARCHAR(255) NOT NULL,
+                    [Role] NVARCHAR(50) NOT NULL,
+                    [DisplayName] NVARCHAR(100) NULL,
+                    [Organization] NVARCHAR(200) NULL,
+                    [PlanType] NVARCHAR(50) NULL,
+                    [ExpireAt] DATETIME2 NULL,
+                    [MaxGuestsPerEvent] INT NOT NULL DEFAULT 500,
+                    [MaxEvents] INT NOT NULL DEFAULT 1,
+                    [IsActive] BIT NOT NULL DEFAULT 1,
+                    [CreatedAt] DATETIME2 NOT NULL DEFAULT GETUTCDATE(),
+                    [Notes] NVARCHAR(1000) NULL
+                );
+                CREATE UNIQUE INDEX [IX_checkInUsers_Username] ON [checkInUsers]([Username]);
+            END
 
-        // Seed demo event and guests in SQL if missing or empty
-        var seedGuestsSql = @"
-        IF NOT EXISTS (SELECT 1 FROM [checkInEvents])
-        BEGIN
-            INSERT INTO [checkInEvents] ([EventId], [EventName], [EventDate], [Location], [Description], [IsActive], [CreatedAt], [OwnerUsername])
-            VALUES ('event_20260917_084526', N'月烤月嗨', '2026-09-17 09:00:00', N'後山停車場', N'2026 秀傳中秋同樂烤肉聯歡大會', 1, GETUTCDATE(), 'single_demo');
-        END
+            IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('checkInEvents') AND name = 'OwnerUsername')
+            BEGIN
+                ALTER TABLE [checkInEvents] ADD [OwnerUsername] NVARCHAR(100) NULL;
+            END
+            ";
 
-        DECLARE @TargetEventId NVARCHAR(100);
-        SELECT TOP 1 @TargetEventId = [EventId] FROM [checkInEvents] ORDER BY [CreatedAt] ASC;
+            using var cmd = new SqlCommand(ddlSql, conn);
+            cmd.ExecuteNonQuery();
 
-        IF @TargetEventId IS NOT NULL AND NOT EXISTS (SELECT 1 FROM [checkInGuests] WHERE [EventId] = @TargetEventId)
-        BEGIN
-            -- VIP 1 級長官 (已到場 1 位)
-            INSERT INTO [checkInGuests] ([EventId], [GuestId], [Name], [Organization], [Title], [RankWeight], [TableNo], [IsCheckedIn], [CheckedInAt], [CheckedInBy], [QrCodeHash], [Phone], [Notes])
-            VALUES (@TargetEventId, '00601441', N'黃院長', N'秀傳紀念醫院', N'院長', 1, N'VIP-1 主桌', 1, DATEADD(minute, -35, GETUTCDATE()), N'櫃檯報到處', 'SC-2026-00601441', '0922-111-222', N'大會主席');
+            // Seed default admin and demo members in SQL if missing
+            var seedUsersSql = @"
+            IF NOT EXISTS (SELECT 1 FROM [checkInUsers] WHERE [Username] = 'admin')
+            BEGIN
+                INSERT INTO [checkInUsers] ([UserId], [Username], [PasswordHash], [Role], [DisplayName], [Organization], [PlanType], [ExpireAt], [MaxGuestsPerEvent], [MaxEvents], [IsActive], [CreatedAt], [Notes])
+                VALUES ('user_admin', 'admin', @AdminPass, 'Admin', N'系統最高管理員', N'InPoint 核心管理中心', 'Unlimited', NULL, 99999, -1, 1, GETUTCDATE(), N'預設系統管理員');
+            END
 
-            -- VIP 2 級長官 (已到場 2 位)
-            INSERT INTO [checkInGuests] ([EventId], [GuestId], [Name], [Organization], [Title], [RankWeight], [TableNo], [IsCheckedIn], [CheckedInAt], [CheckedInBy], [QrCodeHash], [Phone], [Notes])
-            VALUES (@TargetEventId, '00601442', N'張副院長', N'彰濱秀傳紀念醫院', N'副院長', 2, N'VIP-2 貴賓席', 1, DATEADD(minute, -25, GETUTCDATE()), N'櫃檯報到處', 'SC-2026-00601442', '0988-999-000', N'座談引言人');
+            IF NOT EXISTS (SELECT 1 FROM [checkInUsers] WHERE [Username] = 'single_demo')
+            BEGIN
+                INSERT INTO [checkInUsers] ([UserId], [Username], [PasswordHash], [Role], [DisplayName], [Organization], [PlanType], [ExpireAt], [MaxGuestsPerEvent], [MaxEvents], [IsActive], [CreatedAt], [Notes])
+                VALUES ('user_single_demo', 'single_demo', @DemoPass, 'Member', N'陳專員 (單場活動試用)', N'前瞻生醫研發中心', 'SingleEvent', DATEADD(day, 7, GETUTCDATE()), 500, 1, 1, GETUTCDATE(), N'單場活動 7 天授權體驗帳號');
+            END
 
-            INSERT INTO [checkInGuests] ([EventId], [GuestId], [Name], [Organization], [Title], [RankWeight], [TableNo], [IsCheckedIn], [CheckedInAt], [CheckedInBy], [QrCodeHash], [Phone], [Notes])
-            VALUES (@TargetEventId, '00601443', N'李議員', N'彰化縣議會', N'議員', 2, N'VIP-2 貴賓席', 1, DATEADD(minute, -20, GETUTCDATE()), N'櫃檯報到處', 'SC-2026-00601443', '0933-555-777', N'特邀指導貴賓');
+            IF NOT EXISTS (SELECT 1 FROM [checkInUsers] WHERE [Username] = 'annual_demo')
+            BEGIN
+                INSERT INTO [checkInUsers] ([UserId], [Username], [PasswordHash], [Role], [DisplayName], [Organization], [PlanType], [ExpireAt], [MaxGuestsPerEvent], [MaxEvents], [IsActive], [CreatedAt], [Notes])
+                VALUES ('user_annual_demo', 'annual_demo', @DemoPass, 'Member', N'林主任 (機構年度專案)', N'秀傳醫療體系 - 營運管理部', 'AnnualOrg', DATEADD(year, 1, GETUTCDATE()), 1500, -1, 1, GETUTCDATE(), N'機構年度方案完整功能帳號');
+            END
+            ";
+            using var seedCmd = new SqlCommand(seedUsersSql, conn);
+            seedCmd.Parameters.AddWithValue("@AdminPass", InMemoryEventService.HashPassword("ZiEiHrpPq@"));
+            seedCmd.Parameters.AddWithValue("@DemoPass", InMemoryEventService.HashPassword("123456"));
+            seedCmd.ExecuteNonQuery();
 
-            -- VIP 3 級長官 (已到場 1 位)
-            INSERT INTO [checkInGuests] ([EventId], [GuestId], [Name], [Organization], [Title], [RankWeight], [TableNo], [IsCheckedIn], [CheckedInAt], [CheckedInBy], [QrCodeHash], [Phone], [Notes])
-            VALUES (@TargetEventId, '00601444', N'陳主任', N'心血管醫學部', N'主任', 3, N'第 3 組 (12桌)', 1, DATEADD(minute, -15, GETUTCDATE()), N'櫃檯報到處', 'SC-2026-00601444', '0955-667-788', N'專題座談代表');
+            // Seed demo event and guests in SQL if missing or empty
+            var seedGuestsSql = @"
+            IF NOT EXISTS (SELECT 1 FROM [checkInEvents])
+            BEGIN
+                INSERT INTO [checkInEvents] ([EventId], [EventName], [EventDate], [Location], [Description], [IsActive], [CreatedAt], [OwnerUsername])
+                VALUES ('event_20260917_084526', N'月烤月嗨', '2026-09-17 09:00:00', N'後山停車場', N'2026 秀傳中秋同樂烤肉聯歡大會', 1, GETUTCDATE(), 'single_demo');
+            END
 
-            -- 尚未抵達之貴賓長官與一般同仁
-            INSERT INTO [checkInGuests] ([EventId], [GuestId], [Name], [Organization], [Title], [RankWeight], [TableNo], [IsCheckedIn], [CheckedInAt], [CheckedInBy], [QrCodeHash], [Phone], [Notes])
-            VALUES 
-            (@TargetEventId, '00601445', N'林組長', N'資訊科技處', N'組長', 3, N'第 3 組 (12桌)', 0, NULL, NULL, 'SC-2026-00601445', '0966-778-899', N'系統維運代表'),
-            (@TargetEventId, '00601446', N'趙管理師', N'品質管理中心', N'資深管理師', 4, N'第 5 組 (15桌)', 1, DATEADD(minute, -10, GETUTCDATE()), N'櫃檯報到處', 'SC-2026-00601446', '0977-889-900', N'同仁代表'),
-            (@TargetEventId, '00601447', N'孫專員', N'醫療企劃部', N'專員', 4, N'第 5 組 (15桌)', 1, DATEADD(minute, -8, GETUTCDATE()), N'櫃檯報到處', 'SC-2026-00601447', '0912-333-444', N'企劃同仁'),
-            (@TargetEventId, '00601448', N'郭工程師', N'醫工部', N'工程師', 4, N'第 6 組 (18桌)', 0, NULL, NULL, 'SC-2026-00601448', '0922-444-555', N'醫工同仁');
-        END
-        ";
-        using var seedGuestsCmd = new SqlCommand(seedGuestsSql, conn);
-        seedGuestsCmd.ExecuteNonQuery();
+            DECLARE @TargetEventId NVARCHAR(100);
+            SELECT TOP 1 @TargetEventId = [EventId] FROM [checkInEvents] ORDER BY [CreatedAt] ASC;
 
-        Console.WriteLine("[SQL DB] Database tables, demo accounts, and VIP guest lists verified successfully.");
+            IF @TargetEventId IS NOT NULL AND NOT EXISTS (SELECT 1 FROM [checkInGuests] WHERE [EventId] = @TargetEventId)
+            BEGIN
+                -- VIP 1 級長官 (已到場 1 位)
+                INSERT INTO [checkInGuests] ([EventId], [GuestId], [Name], [Organization], [Title], [RankWeight], [TableNo], [IsCheckedIn], [CheckedInAt], [CheckedInBy], [QrCodeHash], [Phone], [Notes])
+                VALUES (@TargetEventId, '00601441', N'黃院長', N'秀傳紀念醫院', N'院長', 1, N'VIP-1 主桌', 1, DATEADD(minute, -35, GETUTCDATE()), N'櫃檯報到處', 'SC-2026-00601441', '0922-111-222', N'大會主席');
+
+                -- VIP 2 級長官 (已到場 2 位)
+                INSERT INTO [checkInGuests] ([EventId], [GuestId], [Name], [Organization], [Title], [RankWeight], [TableNo], [IsCheckedIn], [CheckedInAt], [CheckedInBy], [QrCodeHash], [Phone], [Notes])
+                VALUES (@TargetEventId, '00601442', N'張副院長', N'彰濱秀傳紀念醫院', N'副院長', 2, N'VIP-2 貴賓席', 1, DATEADD(minute, -25, GETUTCDATE()), N'櫃檯報到處', 'SC-2026-00601442', '0988-999-000', N'座談引言人');
+
+                INSERT INTO [checkInGuests] ([EventId], [GuestId], [Name], [Organization], [Title], [RankWeight], [TableNo], [IsCheckedIn], [CheckedInAt], [CheckedInBy], [QrCodeHash], [Phone], [Notes])
+                VALUES (@TargetEventId, '00601443', N'李議員', N'彰化縣議會', N'議員', 2, N'VIP-2 貴賓席', 1, DATEADD(minute, -20, GETUTCDATE()), N'櫃檯報到處', 'SC-2026-00601443', '0933-555-777', N'特邀指導貴賓');
+
+                -- VIP 3 級長官 (已到場 1 位)
+                INSERT INTO [checkInGuests] ([EventId], [GuestId], [Name], [Organization], [Title], [RankWeight], [TableNo], [IsCheckedIn], [CheckedInAt], [CheckedInBy], [QrCodeHash], [Phone], [Notes])
+                VALUES (@TargetEventId, '00601444', N'陳主任', N'心血管醫學部', N'主任', 3, N'第 3 組 (12桌)', 1, DATEADD(minute, -15, GETUTCDATE()), N'櫃檯報到處', 'SC-2026-00601444', '0955-667-788', N'專題座談代表');
+
+                -- 尚未抵達之貴賓長官與一般同仁
+                INSERT INTO [checkInGuests] ([EventId], [GuestId], [Name], [Organization], [Title], [RankWeight], [TableNo], [IsCheckedIn], [CheckedInAt], [CheckedInBy], [QrCodeHash], [Phone], [Notes])
+                VALUES 
+                (@TargetEventId, '00601445', N'林組長', N'資訊科技處', N'組長', 3, N'第 3 組 (12桌)', 0, NULL, NULL, 'SC-2026-00601445', '0966-778-899', N'系統維運代表'),
+                (@TargetEventId, '00601446', N'趙管理師', N'品質管理中心', N'資深管理師', 4, N'第 5 組 (15桌)', 1, DATEADD(minute, -10, GETUTCDATE()), N'櫃檯報到處', 'SC-2026-00601446', '0977-889-900', N'同仁代表'),
+                (@TargetEventId, '00601447', N'孫專員', N'醫療企劃部', N'專員', 4, N'第 5 組 (15桌)', 1, DATEADD(minute, -8, GETUTCDATE()), N'櫃檯報到處', 'SC-2026-00601447', '0912-333-444', N'企劃同仁'),
+                (@TargetEventId, '00601448', N'郭工程師', N'醫工部', N'工程師', 4, N'第 6 組 (18桌)', 0, NULL, NULL, 'SC-2026-00601448', '0922-444-555', N'醫工同仁');
+            END
+            ";
+            using var seedGuestsCmd = new SqlCommand(seedGuestsSql, conn);
+            seedGuestsCmd.ExecuteNonQuery();
+
+            Console.WriteLine("[SQL Server DB] Database tables, demo accounts, and VIP guest lists verified successfully.");
+        }
     }
     catch (Exception ex)
     {
