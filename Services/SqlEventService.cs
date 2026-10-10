@@ -552,11 +552,11 @@ public class SqlEventService : IEventService
             {
                 rank = 1;
             }
-            else if (title.Contains("副院長") || title.Contains("議員") || title.Contains("立委") || title.Contains("代表") || title.Contains("組長"))
+            else if (title.Contains("副院長") || title.Contains("議員") || title.Contains("立委") || title.Contains("代表") || title.Contains("組長") || title.Contains("督導"))
             {
                 rank = 2;
             }
-            else if (title.Contains("主任") || title.Contains("教授") || title.Contains("醫師") || title.Contains("處長") || title.Contains("理事長"))
+            else if (title.Contains("主任") || title.Contains("教授") || title.Contains("醫師") || title.Contains("處長") || title.Contains("理事長") || title.Contains("學者") || title.Contains("專家") || title.Contains("講師"))
             {
                 rank = 3;
             }

@@ -1702,8 +1702,8 @@ class CheckInApp {
             if (!isNaN(r) && r >= 1 && r <= 4) return r;
             const title = (g.title || '').trim();
             if (/院長|局長|部長|署長|董事長|總裁|副部長|校長/.test(title)) return 1;
-            if (/副院長|副局長|議員|立委|代表|組長|科長|副署長|委員/.test(title)) return 2;
-            if (/主任|教授|醫師|處長|顧問|隊長|副主任|總監/.test(title)) return 3;
+            if (/副院長|副局長|議員|立委|代表|組長|科長|副署長|委員|督導/.test(title)) return 2;
+            if (/主任|教授|醫師|處長|顧問|隊長|副主任|總監|學者|專家|講師/.test(title)) return 3;
             return 4;
         };
 
@@ -2116,8 +2116,8 @@ class CheckInApp {
 
             let rankWeight = 3;
             if (/院長|局長|部長|署長|董事長|總裁/.test(title)) rankWeight = 1;
-            else if (/副院長|議員|立委|代表|組長/.test(title)) rankWeight = 2;
-            else if (/主任|教授|醫師|處長/.test(title)) rankWeight = 3;
+            else if (/副院長|議員|立委|代表|組長|督導/.test(title)) rankWeight = 2;
+            else if (/主任|教授|醫師|處長|學者|專家|講師/.test(title)) rankWeight = 3;
             else rankWeight = 4;
 
             const guestObj = {
@@ -2221,8 +2221,8 @@ class CheckInApp {
 
         let rankWeight = 3;
         if (/院長|局長|部長|署長|董事長|總裁/.test(title || '')) rankWeight = 1;
-        else if (/副院長|議員|立委|代表|組長/.test(title || '')) rankWeight = 2;
-        else if (/主任|教授|醫師|處長/.test(title || '')) rankWeight = 3;
+        else if (/副院長|議員|立委|代表|組長|督導/.test(title || '')) rankWeight = 2;
+        else if (/主任|教授|醫師|處長|學者|專家|講師/.test(title || '')) rankWeight = 3;
         else rankWeight = 4;
 
         try {
