@@ -65,6 +65,51 @@ if (useSql)
 
         if (isPostgres)
         {
+            try
+            {
+                var pgConnStr = ConvertPostgresUrlToConnectionString(activeConnStr);
+                using var pgConn = new NpgsqlConnection(pgConnStr);
+                pgConn.Open();
+
+                var alterPgSql = @"
+                DO $$
+                BEGIN
+                    -- 檢查並為 checkInEvents (雙引號駝峰表名) 新增欄位
+                    IF EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'checkInEvents') THEN
+                        IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name = 'checkInEvents' AND column_name = 'RankRules') THEN
+                            ALTER TABLE ""checkInEvents"" ADD COLUMN ""RankRules"" TEXT NULL;
+                        END IF;
+                        IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name = 'checkInEvents' AND column_name = 'OwnerUsername') THEN
+                            ALTER TABLE ""checkInEvents"" ADD COLUMN ""OwnerUsername"" VARCHAR(100) NULL;
+                        END IF;
+                    END IF;
+
+                    -- 檢查並為 checkinevents (全小寫表名) 新增欄位
+                    IF EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'checkinevents') THEN
+                        IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name = 'checkinevents' AND column_name = 'RankRules') THEN
+                            ALTER TABLE checkinevents ADD COLUMN ""RankRules"" TEXT NULL;
+                        END IF;
+                        IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name = 'checkinevents' AND column_name = 'rankrules') THEN
+                            ALTER TABLE checkinevents ADD COLUMN rankrules TEXT NULL;
+                        END IF;
+                        IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name = 'checkinevents' AND column_name = 'OwnerUsername') THEN
+                            ALTER TABLE checkinevents ADD COLUMN ""OwnerUsername"" VARCHAR(100) NULL;
+                        END IF;
+                        IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name = 'checkinevents' AND column_name = 'ownerusername') THEN
+                            ALTER TABLE checkinevents ADD COLUMN ownerusername VARCHAR(100) NULL;
+                        END IF;
+                    END IF;
+                END $$;
+                ";
+                using var alterCmd = new NpgsqlCommand(alterPgSql, pgConn);
+                alterCmd.ExecuteNonQuery();
+                Console.WriteLine("[PostgreSQL DB] Alter table column check executed successfully.");
+            }
+            catch (Exception pgEx)
+            {
+                Console.WriteLine($"[PostgreSQL DB] Alter column migration note: {pgEx.Message}");
+            }
+
             if (!db.Users.Any(u => u.Username == "admin"))
             {
                 db.Users.Add(new User

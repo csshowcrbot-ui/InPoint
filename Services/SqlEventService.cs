@@ -18,18 +18,26 @@ public class SqlEventService : IEventService
 
     public async Task<List<Event>> GetEventsAsync(string? ownerUsername = null, string role = "Admin")
     {
-        await using var db = await _dbFactory.CreateDbContextAsync();
-        var query = db.Events.AsQueryable();
-
-        if (role == "Member" && !string.IsNullOrWhiteSpace(ownerUsername))
+        try
         {
-            query = query.Where(e => e.OwnerUsername == ownerUsername || string.IsNullOrEmpty(e.OwnerUsername));
-        }
+            await using var db = await _dbFactory.CreateDbContextAsync();
+            var query = db.Events.AsQueryable();
 
-        return await query
-            .OrderByDescending(e => e.IsActive)
-            .ThenByDescending(e => e.EventDate)
-            .ToListAsync();
+            if (role == "Member" && !string.IsNullOrWhiteSpace(ownerUsername))
+            {
+                query = query.Where(e => e.OwnerUsername == ownerUsername || string.IsNullOrEmpty(e.OwnerUsername));
+            }
+
+            return await query
+                .OrderByDescending(e => e.IsActive)
+                .ThenByDescending(e => e.EventDate)
+                .ToListAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[SqlEventService] GetEventsAsync exception: {ex.Message}\n{ex.StackTrace}");
+            throw;
+        }
     }
 
     public async Task<Event?> GetEventByIdAsync(string eventId)
