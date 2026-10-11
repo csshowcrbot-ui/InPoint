@@ -3,6 +3,27 @@
  * Master Application Controller with Full RBAC, Privacy Guard, & Plan Management
  */
 
+/**
+ * 全域貴賓階級與報到狀態輔助函式 (全域相容 camelCase 與 PascalCase)
+ */
+function getGuestRank(g) {
+    if (!g) return 4;
+    const title = (g.title || g.Title || '').trim();
+    if (title.includes('照專') && !title.includes('督導')) return 4;
+    let r = parseInt(g.rankWeight !== undefined ? g.rankWeight : (g.RankWeight !== undefined ? g.RankWeight : null), 10);
+    if (!isNaN(r) && r >= 1 && r <= 4) return r;
+    if (/院長|局長|部長|署長|董事長|總裁|副部長|校長/.test(title)) return 1;
+    if (/副院長|副局長|議員|立委|代表|組長|科長|副署長|委員|督導/.test(title)) return 2;
+    if (/主任|教授|醫師|處長|顧問|隊長|副主任|總監|學者|專家|講師/.test(title)) return 3;
+    return 4;
+}
+
+function isGuestCheckedIn(g) {
+    if (!g) return false;
+    return g.isCheckedIn === true || g.isCheckedIn === 'true' || g.isCheckedIn === 1 || g.isCheckedIn === '1' ||
+           g.IsCheckedIn === true || g.IsCheckedIn === 'true' || g.IsCheckedIn === 1 || g.IsCheckedIn === '1';
+}
+
 class CheckInApp {
     constructor() {
         this.currentEventId = '';
@@ -1425,28 +1446,35 @@ class CheckInApp {
         const emptyBox = document.getElementById('guestCardsEmpty');
         if (!grid) return;
 
-        let filtered = this.guests;
+        let filtered = this.guests || [];
 
         // 1. Filter by chip
         if (this.activeFilter === 'checked') {
-            filtered = filtered.filter(g => g.isCheckedIn);
+            filtered = filtered.filter(g => isGuestCheckedIn(g));
         } else if (this.activeFilter === 'pending') {
-            filtered = filtered.filter(g => !g.isCheckedIn);
+            filtered = filtered.filter(g => !isGuestCheckedIn(g));
         } else if (this.activeFilter === 'vip') {
             filtered = filtered.filter(g => getGuestRank(g) <= 2);
         }
 
         // 2. Filter by search query
         if (this.searchQuery) {
-            filtered = filtered.filter(g =>
-                (g.name && g.name.toLowerCase().includes(this.searchQuery)) ||
-                (g.guestId && g.guestId.toLowerCase().includes(this.searchQuery)) ||
-                (g.organization && g.organization.toLowerCase().includes(this.searchQuery)) ||
-                (g.title && g.title.toLowerCase().includes(this.searchQuery)) ||
-                (g.tableNo && g.tableNo.toLowerCase().includes(this.searchQuery)) ||
-                (g.notes && g.notes.toLowerCase().includes(this.searchQuery)) ||
-                (g.phone && g.phone.includes(this.searchQuery))
-            );
+            filtered = filtered.filter(g => {
+                const name = (g.name || g.Name || '').toLowerCase();
+                const guestId = (g.guestId || g.GuestId || '').toLowerCase();
+                const organization = (g.organization || g.Organization || '').toLowerCase();
+                const title = (g.title || g.Title || '').toLowerCase();
+                const tableNo = (g.tableNo || g.TableNo || '').toLowerCase();
+                const notes = (g.notes || g.Notes || '').toLowerCase();
+                const phone = (g.phone || g.Phone || '');
+                return name.includes(this.searchQuery) ||
+                       guestId.includes(this.searchQuery) ||
+                       organization.includes(this.searchQuery) ||
+                       title.includes(this.searchQuery) ||
+                       tableNo.includes(this.searchQuery) ||
+                       notes.includes(this.searchQuery) ||
+                       phone.includes(this.searchQuery);
+            });
         }
 
         if (filtered.length === 0) {
@@ -1473,6 +1501,17 @@ class CheckInApp {
         if (emptyBox) emptyBox.style.display = 'none';
 
         grid.innerHTML = filtered.map(g => {
+            const gName = g.name || g.Name || '';
+            const gId = g.guestId || g.GuestId || '';
+            const gOrg = g.organization || g.Organization || '';
+            const gTitle = g.title || g.Title || '';
+            const gTable = g.tableNo || g.TableNo || '';
+            const gNotes = g.notes || g.Notes || '';
+            const gPhone = g.phone || g.Phone || '';
+            const checked = isGuestCheckedIn(g);
+            const checkedAt = g.checkedInAt || g.CheckedInAt;
+            const checkedBy = g.checkedInBy || g.CheckedInBy;
+
             let rankBadgeHtml = '';
             const rank = getGuestRank(g);
             if (rank === 1) {
@@ -1487,7 +1526,7 @@ class CheckInApp {
 
             // 2. Table / Seat Badge matching screenshot
             let tableBadgeHtml = '';
-            const t = (g.tableNo || '').trim();
+            const t = (gTable).trim();
             if (!t || t === '-' || t === '未排桌') {
                 tableBadgeHtml = `<span class="table-badge table-unassigned">🪑 未排桌</span>`;
             } else {
@@ -1496,8 +1535,8 @@ class CheckInApp {
 
             // 3. Organization & Title matching screenshot
             let orgTitleText = '';
-            const org = (g.organization || '').trim();
-            const title = (g.title || '').trim();
+            const org = gOrg.trim();
+            const title = gTitle.trim();
             if (org && title) {
                 orgTitleText = `${this.escapeHtml(org)} ‧ ${this.escapeHtml(title)}`;
             } else if (org) {
@@ -1510,25 +1549,25 @@ class CheckInApp {
 
             // 4. Notes / Contact pill
             let notesHtml = '';
-            if (g.notes && g.notes.trim()) {
-                const text = g.notes.trim();
+            if (gNotes && gNotes.trim()) {
+                const text = gNotes.trim();
                 const dispText = text.startsWith('聯絡人') ? text : `聯絡人：${text}`;
                 notesHtml = `<div class="guest-contact-pill">📌 ${this.escapeHtml(dispText)}</div>`;
-            } else if (g.phone && g.phone.trim()) {
-                notesHtml = `<div class="guest-contact-pill">📞 ${this.escapeHtml(g.phone.trim())}</div>`;
+            } else if (gPhone && gPhone.trim()) {
+                notesHtml = `<div class="guest-contact-pill">📞 ${this.escapeHtml(gPhone.trim())}</div>`;
             }
 
             // 5. Check-in Timestamp & Status
             let checkInStatusHtml = '';
-            if (g.isCheckedIn) {
+            if (checked) {
                 let timeStr = '';
-                if (g.checkedInAt) {
-                    const d = new Date(g.checkedInAt);
+                if (checkedAt) {
+                    const d = new Date(checkedAt);
                     if (!isNaN(d.getTime())) {
                         timeStr = d.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' });
                     }
                 }
-                const byStr = g.checkedInBy || '現場報到處櫃檯 A';
+                const byStr = checkedBy || '現場報到處櫃檯 A';
                 if (timeStr) {
                     checkInStatusHtml = `<span class="checkin-time-text">已於 ${timeStr} 報到 (${this.escapeHtml(byStr)})</span>`;
                 } else {
@@ -1539,17 +1578,17 @@ class CheckInApp {
             }
 
             // 6. Action Buttons matching screenshot
-            const checkInBtnHtml = g.isCheckedIn
-                ? `<button type="button" class="btn-checkin-toggle is-checked" onclick="app.toggleCheckIn('${g.guestId}', false)" title="點擊可撤回報到">✓ 已報到 (點擊撤回)</button>`
-                : `<button type="button" class="btn-checkin-toggle is-pending" onclick="app.toggleCheckIn('${g.guestId}', true)" title="點擊進行一鍵報到">⚡ 點擊報到</button>`;
+            const checkInBtnHtml = checked
+                ? `<button type="button" class="btn-checkin-toggle is-checked" onclick="app.toggleCheckIn('${gId}', false)" title="點擊可撤回報到">✓ 已報到 (點擊撤回)</button>`
+                : `<button type="button" class="btn-checkin-toggle is-pending" onclick="app.toggleCheckIn('${gId}', true)" title="點擊進行一鍵報到">⚡ 點擊報到</button>`;
 
-            const deleteBtnHtml = `<button type="button" class="btn-card-delete" onclick="app.showDeleteGuestModal('${g.guestId}', '${this.escapeHtml(this.maskName(g.name))}')" title="刪除此貴賓">🗑️</button>`;
+            const deleteBtnHtml = `<button type="button" class="btn-card-delete" onclick="app.showDeleteGuestModal('${gId}', '${this.escapeHtml(this.maskName(gName))}')" title="刪除此貴賓">🗑️</button>`;
 
             return `
-              <div class="guest-card ${g.isCheckedIn ? 'is-checked-in' : ''}" data-guest-id="${g.guestId}">
+              <div class="guest-card ${checked ? 'is-checked-in' : ''}" data-guest-id="${gId}">
                 <div class="guest-card-header">
                   <div class="guest-name-badge-group">
-                    <span class="guest-name">${this.escapeHtml(this.maskName(g.name))}</span>
+                    <span class="guest-name">${this.escapeHtml(this.maskName(gName))}</span>
                     ${rankBadgeHtml}
                   </div>
                   ${tableBadgeHtml}
@@ -1560,7 +1599,7 @@ class CheckInApp {
                 ${notesHtml}
 
                 <div class="guest-meta-row">
-                  <span class="guest-code">編號：${this.escapeHtml(g.guestId)}</span>
+                  <span class="guest-code">編號：${this.escapeHtml(gId)}</span>
                   ${checkInStatusHtml}
                 </div>
 
