@@ -164,7 +164,7 @@ class ApiService {
                 });
                 if (eventsRes.ok) {
                     const eventsList = await eventsRes.json();
-                    const newEventsHash = JSON.stringify(eventsList.map(e => [e.eventId || e.EventId, e.eventName || e.EventName, e.isActive ?? e.IsActive]));
+                    const newEventsHash = JSON.stringify(eventsList.map(e => [e.eventId || e.EventId, e.eventName || e.EventName, e.isActive ?? e.IsActive, e.rankRules || e.RankRules]));
                     if (this._lastEventsHash && this._lastEventsHash !== newEventsHash) {
                         this.dispatchLocalEvent('eventChanged', { events: eventsList });
                     }
@@ -536,6 +536,32 @@ class ApiService {
         });
         if (!res.ok) throw new Error('AI 助理查詢失敗');
         return await res.json();
+    }
+
+    async updateRankRules(eventId, rankRules, recalculate = true) {
+        const res = await fetch(`${this.apiBase}api/events/${encodeURIComponent(eventId)}/rank-rules`, {
+            method: 'POST',
+            cache: 'no-store',
+            headers: this.getAuthHeaders({ 'Content-Type': 'application/json' }),
+            body: JSON.stringify({ rankRules, recalculateExistingGuests: recalculate })
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.message || '更新職級規則失敗');
+        this.broadcast('dataSynced', { eventId });
+        return data;
+    }
+
+    async updateGuestRank(eventId, guestId, rankWeight) {
+        const res = await fetch(`${this.apiBase}api/events/${encodeURIComponent(eventId)}/guests/${encodeURIComponent(guestId)}/rank`, {
+            method: 'POST',
+            cache: 'no-store',
+            headers: this.getAuthHeaders({ 'Content-Type': 'application/json' }),
+            body: JSON.stringify({ rankWeight: parseInt(rankWeight, 10) })
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.message || '更新貴賓職級失敗');
+        this.broadcast('checkInChanged', { eventId, guestId, guest: data.guest });
+        return data;
     }
 
     getExportUrl(eventId) {

@@ -27,6 +27,7 @@ public class AppDbContext : DbContext
             entity.Property(e => e.Location).HasMaxLength(255);
             entity.Property(e => e.Description).HasMaxLength(1000);
             entity.Property(e => e.OwnerUsername).HasMaxLength(100);
+            entity.Property(e => e.RankRules);
         });
 
         // Guest Entity -> checkInGuests (Composite Key: EventId + GuestId to support multi-event guest IDs)

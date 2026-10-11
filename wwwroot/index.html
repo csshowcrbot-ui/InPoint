@@ -348,10 +348,13 @@
             <button type="button" class="btn-pill-action btn-pill-secondary" onclick="app.showCloneEventModal()">
               <span>📋 複製此活動為新範本</span>
             </button>
+            <button type="button" class="btn-pill-action btn-pill-gold" onclick="app.showRankWeightSettingsModal()" title="針對本場活動自訂 VIP 職級權重尊榮排序規則與名冊微調">
+              <span>👑 調整職級尊榮排序權重</span>
+            </button>
           </div>
         </div>
 
-        <!-- 2. Export and Import Feature Cards -->
+        <!-- 2. Export, Import & Rank Customization Feature Cards -->
         <div class="export-cards-grid">
           
           <!-- Card A: Export -->
@@ -397,6 +400,32 @@
                 <a href="javascript:void(0)" onclick="app.downloadExcelTemplate()" style="font-size: 12px; color: var(--primary-forest); font-weight: 700; text-decoration: underline;">
                   📥 下載標準貴賓名單 Excel 範本
                 </a>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card C: Rank Weight Tuning -->
+          <div class="export-feature-card export-feature-card-vip">
+            <div>
+              <div class="export-card-header">
+                <div class="export-card-icon vip-icon">👑</div>
+                <div class="export-card-title">
+                  <h4>活動專屬職級尊榮排序</h4>
+                  <p>自訂此活動之 VIP 職級關鍵字與權重</p>
+                </div>
+              </div>
+              <div class="export-card-desc">
+                針對本場活動自由定義特級長官 (Rank 1)、副首長 (Rank 2)、主管專家 (Rank 3) 職稱關鍵字，並支援一鍵重新解析全場名冊與即時名單等級微調。
+              </div>
+            </div>
+            <div>
+              <button type="button" class="btn-vip-action" style="width: 100%;" onclick="app.showRankWeightSettingsModal()">
+                <span>👑 自訂本場職級規則與微調名冊</span>
+              </button>
+              <div style="text-align: center; margin-top: 8px;">
+                <span id="adminRankSummaryTag" style="font-size: 11.5px; color: #B45309; font-weight: 700;">
+                  👑 目前 VIP 統計：載入中...
+                </span>
               </div>
             </div>
           </div>
@@ -991,6 +1020,132 @@
   </div>
 
   <!-- 10.5 Member Events Management Modal (該會員所建立的活動管理) -->
+  <!-- 11. Custom Rank Weight Settings Modal (活動專屬職級權重尊榮排序設定) -->
+  <div class="modal-backdrop" id="rankWeightSettingsModal">
+    <div class="modal-dialog" style="max-width: 820px;">
+      <div class="modal-header" style="background: linear-gradient(135deg, #1A5E42 0%, #0F3B29 100%); color: #fff;">
+        <div>
+          <div class="modal-title" style="color: #fff;"><span>👑</span> 職級權重尊榮排序設定：<strong id="rankSettingsEventNameDisplay">當前活動</strong></div>
+          <div style="font-size: 12px; color: #A7F3D0; margin-top: 3px;">針對本場活動自訂 VIP 長官識別規則，即時連動主持人看板與報到大螢幕</div>
+        </div>
+        <button class="modal-close-btn" style="color: #fff;" onclick="app.closeRankWeightSettingsModal()">✕</button>
+      </div>
+      
+      <div class="rank-settings-content" style="padding: 20px 24px; max-height: calc(85vh - 70px); overflow-y: auto;">
+        <div class="rank-settings-intro">
+          <p style="font-size: 12.5px; color: var(--text-charcoal); line-height: 1.6; margin-bottom: 12px;">
+            💡 <strong>活動專屬權重規則</strong>：不同活動可設定專屬職稱辨識關鍵字。儲存後主持人看板即時以新權重尊榮排序，Excel 匯入與 AI 解析也將自動套用本活動規則。
+          </p>
+          
+          <!-- Template Preset Quick Buttons -->
+          <div style="margin-bottom: 16px; background: #F8FAFC; padding: 10px 14px; border-radius: 10px; border: 1px solid #E2E8F0;">
+            <span style="font-size: 12px; font-weight: 800; color: var(--text-charcoal); display: block; margin-bottom: 6px;">⚡ 一鍵快速帶入行業常用職級範本：</span>
+            <div class="rank-preset-chips" style="display: flex; gap: 8px; flex-wrap: wrap;">
+              <button type="button" class="btn-chip-preset" onclick="app.applyRankPreset('hospital')">🏥 醫療院所與學會模式</button>
+              <button type="button" class="btn-chip-preset" onclick="app.applyRankPreset('gov')">🏛️ 政府機關與官方典禮</button>
+              <button type="button" class="btn-chip-preset" onclick="app.applyRankPreset('corporate')">🏢 企業高峰會與商務論壇</button>
+              <button type="button" class="btn-chip-preset" onclick="app.applyRankPreset('default')">🔄 系統預設標準</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Form for 4 Tiers -->
+        <form id="rankWeightSettingsForm" onsubmit="app.handleSaveRankSettings(event)">
+          
+          <!-- Tier 1 -->
+          <div class="rank-tier-row tier-gold" style="border-left: 4px solid #C89B3C;">
+            <div class="rank-tier-badge">
+              <span class="rank-num" style="color: #B45309; font-weight: 900;">🥇 Rank 1</span>
+              <span class="rank-label" id="rank1CountDisplay" style="font-weight: 700;">特級長官 (0人)</span>
+            </div>
+            <div class="rank-tier-inputs">
+              <label class="rank-input-label">職稱包含關鍵字（以半形逗號或直線分隔）：</label>
+              <input type="text" id="rank1KeywordsInput" class="form-control" placeholder="例：院長, 局長, 部長, 署長, 董事長, 總裁, 副部長, 校長, 理事長, 市長, 縣長" required />
+            </div>
+          </div>
+
+          <!-- Tier 2 -->
+          <div class="rank-tier-row tier-silver" style="border-left: 4px solid #0284C7;">
+            <div class="rank-tier-badge">
+              <span class="rank-num" style="color: #0369A1; font-weight: 900;">🥈 Rank 2</span>
+              <span class="rank-label" id="rank2CountDisplay" style="font-weight: 700;">副首長/民代/督導 (0人)</span>
+            </div>
+            <div class="rank-tier-inputs">
+              <label class="rank-input-label">職稱包含關鍵字：</label>
+              <input type="text" id="rank2KeywordsInput" class="form-control" placeholder="例：副院長, 副局長, 議員, 立委, 代表, 組長, 科長, 副署長, 委員, 督導, 副市長, 副縣長, 秘書長" required />
+            </div>
+          </div>
+
+          <!-- Tier 3 -->
+          <div class="rank-tier-row tier-bronze" style="border-left: 4px solid #7C3AED;">
+            <div class="rank-tier-badge">
+              <span class="rank-num" style="color: #6D28D9; font-weight: 900;">🥉 Rank 3</span>
+              <span class="rank-label" id="rank3CountDisplay" style="font-weight: 700;">主管專家/學者講師 (0人)</span>
+            </div>
+            <div class="rank-tier-inputs">
+              <label class="rank-input-label">職稱包含關鍵字：</label>
+              <input type="text" id="rank3KeywordsInput" class="form-control" placeholder="例：主任, 教授, 醫師, 處長, 顧問, 隊長, 副主任, 總監, 學者, 專家, 講師, 經理, 協理" required />
+            </div>
+          </div>
+
+          <!-- Tier 4 Excludes -->
+          <div class="rank-tier-row tier-general" style="border-left: 4px solid #94A3B8;">
+            <div class="rank-tier-badge">
+              <span class="rank-num" style="color: #475569; font-weight: 900;">👥 Rank 4</span>
+              <span class="rank-label" id="rank4CountDisplay" style="font-weight: 700;">一般貴賓/同仁 (0人)</span>
+            </div>
+            <div class="rank-tier-inputs">
+              <label class="rank-input-label">降級排除關鍵字（符合且未含督導者強制列為 Rank 4）：</label>
+              <input type="text" id="rank4KeywordsInput" class="form-control" placeholder="例：照專" />
+            </div>
+          </div>
+
+          <!-- Guest Table Quick Tuning Sub-Section -->
+          <div style="margin-top: 18px; border-top: 1px solid #E2E8F0; padding-top: 14px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 8px;">
+              <div>
+                <span style="font-size: 13px; font-weight: 800; color: var(--text-charcoal);">📋 本場貴賓名冊個別快速調等 (點選下拉即可即時微調)</span>
+                <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">可為特定未符關鍵字之貴賓手動指定 Rank 1～4</div>
+              </div>
+              <input type="text" id="rankGuestSearchInput" class="form-control" style="max-width: 200px; font-size: 11px; padding: 4px 8px;" placeholder="🔍 搜尋貴賓姓名或職稱..." oninput="app.filterRankSettingsGuests()" />
+            </div>
+            <div class="rank-guest-list-wrap" style="max-height: 200px; overflow-y: auto; border: 1px solid #E2E8F0; border-radius: 8px; background: #FFF;">
+              <table style="width: 100%; border-collapse: collapse; font-size: 12px;" id="rankGuestTuningTable">
+                <thead>
+                  <tr style="background: #F8FAFC; border-bottom: 1px solid #E2E8F0; text-align: left; position: sticky; top: 0; z-index: 1;">
+                    <th style="padding: 6px 10px;">姓名</th>
+                    <th style="padding: 6px 10px;">服務單位</th>
+                    <th style="padding: 6px 10px;">職稱</th>
+                    <th style="padding: 6px 10px; text-align: center;">尊榮職級調整 (立即儲存)</th>
+                  </tr>
+                </thead>
+                <tbody id="rankGuestTuningTbody">
+                  <!-- Rendered by JS -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div style="margin-top: 14px; background: #ECFDF5; padding: 8px 12px; border-radius: 8px; border: 1px solid #A7F3D0;">
+            <label style="font-size: 12px; display: flex; align-items: center; gap: 6px; cursor: pointer; font-weight: 700; color: var(--primary-forest);">
+              <input type="checkbox" id="chkRecalculateOnSave" checked />
+              <span>⚡ 儲存時立即依新關鍵字規則重新計算當前活動所有名冊貴賓 (自動重算權重)</span>
+            </label>
+          </div>
+
+          <div class="modal-footer" style="padding: 16px 0 0 0; border-top: 1px solid #E5E7EB; margin-top: 14px; display: flex; justify-content: space-between; align-items: center;">
+            <button type="button" class="btn btn-secondary" style="color: #B45309; border-color: #FCD34D;" onclick="app.resetRankSettingsToDefault()">🔄 還原系統預設</button>
+            <div style="display: flex; gap: 8px;">
+              <button type="button" class="btn btn-secondary" onclick="app.closeRankWeightSettingsModal()">取消</button>
+              <button type="submit" class="btn btn-primary" id="btnSaveRankRules" style="box-shadow: 0 4px 14px rgba(26,94,66,0.25);">
+                <span>💾 儲存並套用此活動規則</span>
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
   <div class="modal-backdrop" id="memberEventsModal">
     <div class="modal-dialog" style="max-width: 920px;">
       <div class="modal-header">

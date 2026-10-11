@@ -359,6 +359,10 @@ public class InMemoryEventService : IEventService
             existing.Location = updatedEvent.Location;
             existing.Description = updatedEvent.Description;
             existing.IsActive = updatedEvent.IsActive;
+            if (updatedEvent.RankRules != null)
+            {
+                existing.RankRules = updatedEvent.RankRules;
+            }
             SaveDataToDisk();
             return Task.FromResult(true);
         }
@@ -398,7 +402,8 @@ public class InMemoryEventService : IEventService
             Description = description ?? sourceEv?.Description ?? string.Empty,
             IsActive = true,
             CreatedAt = DateTime.UtcNow,
-            OwnerUsername = ownerUsername
+            OwnerUsername = ownerUsername,
+            RankRules = sourceEv?.RankRules
         };
 
         _events[newEvent.EventId] = newEvent;

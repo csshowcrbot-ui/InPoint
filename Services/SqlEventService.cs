@@ -62,6 +62,10 @@ public class SqlEventService : IEventService
         existing.Location = updatedEvent.Location;
         existing.Description = updatedEvent.Description;
         existing.IsActive = updatedEvent.IsActive;
+        if (updatedEvent.RankRules != null)
+        {
+            existing.RankRules = updatedEvent.RankRules;
+        }
 
         await db.SaveChangesAsync();
         return true;
@@ -112,7 +116,8 @@ public class SqlEventService : IEventService
             Description = description ?? sourceEv?.Description ?? string.Empty,
             IsActive = true,
             CreatedAt = DateTime.UtcNow,
-            OwnerUsername = ownerUsername
+            OwnerUsername = ownerUsername,
+            RankRules = sourceEv?.RankRules
         };
 
         db.Events.Add(newEvent);

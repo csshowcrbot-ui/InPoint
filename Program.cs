@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
@@ -189,6 +190,11 @@ if (useSql)
             IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('checkInEvents') AND name = 'OwnerUsername')
             BEGIN
                 ALTER TABLE [checkInEvents] ADD [OwnerUsername] NVARCHAR(100) NULL;
+            END
+
+            IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('checkInEvents') AND name = 'RankRules')
+            BEGIN
+                ALTER TABLE [checkInEvents] ADD [RankRules] NVARCHAR(MAX) NULL;
             END
             ";
 
@@ -1330,6 +1336,187 @@ app.MapPost("/api/events/toggle-checkin", async (ToggleCheckInDirectRequest req,
     }
     return Results.NotFound(new { message = "找不到該貴賓" });
 });
+
+// Helper to evaluate rank weight based on title and custom event rank rules
+static int CalculateRankWeightByRules(string title, string? rankRulesJson)
+{
+    title = (title ?? string.Empty).Trim();
+    if (string.IsNullOrWhiteSpace(title)) return 4;
+
+    if (!string.IsNullOrWhiteSpace(rankRulesJson))
+    {
+        try
+        {
+            using var doc = System.Text.Json.JsonDocument.Parse(rankRulesJson);
+            var root = doc.RootElement;
+            
+            // Check rank 4 excludes
+            if (root.TryGetProperty("rank4Keywords", out var r4Arr) && r4Arr.ValueKind == System.Text.Json.JsonValueKind.Array)
+            {
+                foreach (var kw in r4Arr.EnumerateArray())
+                {
+                    var val = kw.GetString()?.Trim();
+                    if (!string.IsNullOrEmpty(val) && title.Contains(val, StringComparison.OrdinalIgnoreCase))
+                    {
+                        if (!title.Contains("督導", StringComparison.OrdinalIgnoreCase))
+                            return 4;
+                    }
+                }
+            }
+
+            // Check rank 1
+            if (root.TryGetProperty("rank1Keywords", out var r1Arr) && r1Arr.ValueKind == System.Text.Json.JsonValueKind.Array)
+            {
+                foreach (var kw in r1Arr.EnumerateArray())
+                {
+                    var val = kw.GetString()?.Trim();
+                    if (!string.IsNullOrEmpty(val) && title.Contains(val, StringComparison.OrdinalIgnoreCase))
+                        return 1;
+                }
+            }
+
+            // Check rank 2
+            if (root.TryGetProperty("rank2Keywords", out var r2Arr) && r2Arr.ValueKind == System.Text.Json.JsonValueKind.Array)
+            {
+                foreach (var kw in r2Arr.EnumerateArray())
+                {
+                    var val = kw.GetString()?.Trim();
+                    if (!string.IsNullOrEmpty(val) && title.Contains(val, StringComparison.OrdinalIgnoreCase))
+                        return 2;
+                }
+            }
+
+            // Check rank 3
+            if (root.TryGetProperty("rank3Keywords", out var r3Arr) && r3Arr.ValueKind == System.Text.Json.JsonValueKind.Array)
+            {
+                foreach (var kw in r3Arr.EnumerateArray())
+                {
+                    var val = kw.GetString()?.Trim();
+                    if (!string.IsNullOrEmpty(val) && title.Contains(val, StringComparison.OrdinalIgnoreCase))
+                        return 3;
+                }
+            }
+
+            return 4;
+        }
+        catch
+        {
+            // fallback to default
+        }
+    }
+
+    // Default System Rules
+    if (title.Contains("照專") && !title.Contains("督導")) return 4;
+    if (Regex.IsMatch(title, @"院長|局長|部長|署長|董事長|總裁|副部長|校長|理事長|市長|縣長")) return 1;
+    if (Regex.IsMatch(title, @"副院長|副局長|議員|立委|代表|組長|科長|副署長|委員|督導|副市長|副縣長|秘書長")) return 2;
+    if (Regex.IsMatch(title, @"主任|教授|醫師|處長|顧問|隊長|副主任|總監|學者|專家|講師|經理|協理")) return 3;
+    return 4;
+}
+
+// Update Event Custom Rank Rules
+app.MapPost("/api/events/{id}/rank-rules", async (string id, UpdateRankRulesRequest req, HttpContext ctx, IEventService service, IHubContext<CheckInHub> hubContext) =>
+{
+    var ev = await service.GetEventByIdAsync(id);
+    if (ev == null)
+    {
+        return Results.NotFound(new { success = false, message = "找不到該活動場次" });
+    }
+
+    ev.RankRules = req.RankRules;
+    await service.UpdateEventAsync(ev);
+
+    int recalculatedCount = 0;
+    if (req.RecalculateExistingGuests)
+    {
+        var guests = await service.GetGuestsAsync(id);
+        foreach (var g in guests)
+        {
+            int newRank = CalculateRankWeightByRules(g.Title, ev.RankRules);
+            if (g.RankWeight != newRank)
+            {
+                g.RankWeight = newRank;
+                await service.UpdateGuestAsync(g);
+                recalculatedCount++;
+            }
+        }
+    }
+
+    var updatedStats = await service.GetEventStatsAsync(id);
+    await hubContext.Clients.Group(id).SendAsync("OnGuestsBatchAdded", await service.GetGuestsAsync(id));
+    await hubContext.Clients.All.SendAsync("OnStatsUpdated", updatedStats);
+
+    return Results.Ok(new
+    {
+        success = true,
+        message = $"已成功更新此活動之專屬職級尊榮排序規則！" + (recalculatedCount > 0 ? $"已同步重新計算 {recalculatedCount} 位貴賓職級權重。" : "現有名冊職級權重已符合最新規則。"),
+        recalculatedCount,
+        eventObj = ev
+    });
+});
+
+// Update Single Guest Rank Weight
+app.MapPost("/api/events/{id}/guests/{gId}/rank", async (string id, string gId, UpdateGuestRankRequest req, HttpContext ctx, IEventService service, IHubContext<CheckInHub> hubContext) =>
+{
+    var guests = await service.GetGuestsAsync(id);
+    var g = guests.FirstOrDefault(x => x.GuestId == gId);
+    if (g == null)
+    {
+        return Results.NotFound(new { success = false, message = "找不到該貴賓" });
+    }
+
+    if (req.RankWeight < 1 || req.RankWeight > 4)
+    {
+        return Results.BadRequest(new { success = false, message = "職級權重必須介於 1 到 4 之間" });
+    }
+
+    g.RankWeight = req.RankWeight;
+    await service.UpdateGuestAsync(g);
+
+    var stats = await service.GetEventStatsAsync(id);
+    await hubContext.Clients.Group(id).SendAsync("OnGuestCheckInChanged", new
+    {
+        EventId = id,
+        Guest = g,
+        UpdatedBy = "名冊管理人員",
+        Timestamp = DateTime.Now,
+        Stats = stats
+    });
+    await hubContext.Clients.All.SendAsync("OnStatsUpdated", stats);
+
+    return Results.Ok(new { success = true, guest = g });
+});
+
+app.MapPut("/api/events/{id}/guests/{gId}/rank", async (string id, string gId, UpdateGuestRankRequest req, HttpContext ctx, IEventService service, IHubContext<CheckInHub> hubContext) =>
+{
+    var guests = await service.GetGuestsAsync(id);
+    var g = guests.FirstOrDefault(x => x.GuestId == gId);
+    if (g == null)
+    {
+        return Results.NotFound(new { success = false, message = "找不到該貴賓" });
+    }
+
+    if (req.RankWeight < 1 || req.RankWeight > 4)
+    {
+        return Results.BadRequest(new { success = false, message = "職級權重必須介於 1 到 4 之間" });
+    }
+
+    g.RankWeight = req.RankWeight;
+    await service.UpdateGuestAsync(g);
+
+    var stats = await service.GetEventStatsAsync(id);
+    await hubContext.Clients.Group(id).SendAsync("OnGuestCheckInChanged", new
+    {
+        EventId = id,
+        Guest = g,
+        UpdatedBy = "名冊管理人員",
+        Timestamp = DateTime.Now,
+        Stats = stats
+    });
+    await hubContext.Clients.All.SendAsync("OnStatsUpdated", stats);
+
+    return Results.Ok(new { success = true, guest = g });
+});
+
 
 // --- 5. Export CSV & Excel ---
 

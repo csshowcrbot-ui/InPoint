@@ -3,19 +3,89 @@
  * Master Application Controller with Full RBAC, Privacy Guard, & Plan Management
  */
 
+// =========================================================================
+// 職級尊榮排序標準規則與行業範本
+// =========================================================================
+const DEFAULT_RANK_RULES = {
+    rank1Keywords: ['院長', '局長', '部長', '署長', '董事長', '總裁', '副部長', '校長', '理事長', '市長', '縣長'],
+    rank2Keywords: ['副院長', '副局長', '議員', '立委', '代表', '組長', '科長', '副署長', '委員', '督導', '副市長', '副縣長', '秘書長'],
+    rank3Keywords: ['主任', '教授', '醫師', '處長', '顧問', '隊長', '副主任', '總監', '學者', '專家', '講師', '經理', '協理'],
+    rank4Keywords: ['照專']
+};
+
+const RANK_PRESETS = {
+    hospital: {
+        rank1Keywords: ['院長', '部長', '董事長', '理事長', '副部長', '校長', '總院長', '榮譽院長'],
+        rank2Keywords: ['副院長', '秘書長', '常務理事', '常務監事', '督導', '組長', '科長', '委員'],
+        rank3Keywords: ['主任', '教授', '醫師', '副主任', '學者', '專家', '講師', '主治醫師', '副教授'],
+        rank4Keywords: ['照專']
+    },
+    gov: {
+        rank1Keywords: ['部長', '次長', '市長', '縣長', '局長', '署長', '院長', '主任委員', '政務委員'],
+        rank2Keywords: ['副部長', '副市長', '副縣長', '副局長', '副署長', '主任秘書', '議員', '立委', '代表', '組長', '科長', '專門委員', '督導', '秘書長'],
+        rank3Keywords: ['專員', '股長', '科員', '幹事', '研究員', '技正', '學者', '專家', '顧問', '隊長'],
+        rank4Keywords: ['約聘', '約僱', '助理']
+    },
+    corporate: {
+        rank1Keywords: ['董事長', '總裁', '執行長', '創辦人', '總經理', '合夥人', '副總裁', 'CEO', 'Chairman'],
+        rank2Keywords: ['副董事長', '副總經理', '副總', '執行副總', '協理', '董事', '監察人', '資深副總'],
+        rank3Keywords: ['總監', '處長', '經理', '副理', '顧問', '特助', '資深經理', '架構師', '主講人', '專案經理'],
+        rank4Keywords: ['專員', '助理', '同仁', '實習生']
+    },
+    default: DEFAULT_RANK_RULES
+};
+
 /**
- * 全域貴賓階級與報到狀態輔助函式 (全域相容 camelCase 與 PascalCase)
+ * 依據規則集合計算職稱之職級權重 (Rank 1~4)
  */
-function getGuestRank(g) {
+function calculateRankWeightByRuleSet(title, rules) {
+    title = (title || '').trim();
+    if (!title) return 4;
+    
+    const r = rules || (window.app && window.app.getCurrentEventRankRules ? window.app.getCurrentEventRankRules() : DEFAULT_RANK_RULES);
+    
+    // 檢查 Rank 4 排除詞 (如: 照專，但若含督導則不排除)
+    const r4List = Array.isArray(r.rank4Keywords) ? r.rank4Keywords : [];
+    for (const kw of r4List) {
+        const k = (kw || '').trim();
+        if (k && title.toLowerCase().includes(k.toLowerCase())) {
+            if (!title.includes('督導')) return 4;
+        }
+    }
+
+    // 檢查 Rank 1
+    const r1List = Array.isArray(r.rank1Keywords) ? r.rank1Keywords : [];
+    for (const kw of r1List) {
+        const k = (kw || '').trim();
+        if (k && title.toLowerCase().includes(k.toLowerCase())) return 1;
+    }
+
+    // 檢查 Rank 2
+    const r2List = Array.isArray(r.rank2Keywords) ? r.rank2Keywords : [];
+    for (const kw of r2List) {
+        const k = (kw || '').trim();
+        if (k && title.toLowerCase().includes(k.toLowerCase())) return 2;
+    }
+
+    // 檢查 Rank 3
+    const r3List = Array.isArray(r.rank3Keywords) ? r.rank3Keywords : [];
+    for (const kw of r3List) {
+        const k = (kw || '').trim();
+        if (k && title.toLowerCase().includes(k.toLowerCase())) return 3;
+    }
+
+    return 4;
+}
+
+/**
+ * 全域貴賓階級與報到狀態輔助函式 (全域相容 camelCase 與 PascalCase，優先自訂活動規則)
+ */
+function getGuestRank(g, rules) {
     if (!g) return 4;
-    const title = (g.title || g.Title || '').trim();
-    if (title.includes('照專') && !title.includes('督導')) return 4;
     let r = parseInt(g.rankWeight !== undefined ? g.rankWeight : (g.RankWeight !== undefined ? g.RankWeight : null), 10);
     if (!isNaN(r) && r >= 1 && r <= 4) return r;
-    if (/院長|局長|部長|署長|董事長|總裁|副部長|校長/.test(title)) return 1;
-    if (/副院長|副局長|議員|立委|代表|組長|科長|副署長|委員|督導/.test(title)) return 2;
-    if (/主任|教授|醫師|處長|顧問|隊長|副主任|總監|學者|專家|講師/.test(title)) return 3;
-    return 4;
+    const title = (g.title || g.Title || '').trim();
+    return calculateRankWeightByRuleSet(title, rules);
 }
 
 function isGuestCheckedIn(g) {
@@ -1809,16 +1879,7 @@ class CheckInApp {
             return;
         }
 
-        const getGuestRank = (g) => {
-            const title = (g.title || '').trim();
-            if (title.includes('照專') && !title.includes('督導')) return 4;
-            let r = parseInt(g.rankWeight !== undefined ? g.rankWeight : (g.RankWeight !== undefined ? g.RankWeight : null), 10);
-            if (!isNaN(r) && r >= 1 && r <= 4) return r;
-            if (/院長|局長|部長|署長|董事長|總裁|副部長|校長/.test(title)) return 1;
-            if (/副院長|副局長|議員|立委|代表|組長|科長|副署長|委員|督導/.test(title)) return 2;
-            if (/主任|教授|醫師|處長|顧問|隊長|副主任|總監|學者|專家|講師/.test(title)) return 3;
-            return 4;
-        };
+        const getGuestRank = (g) => this.getGuestRank(g);
 
         const isGuestCheckedIn = (g) => {
             return g.isCheckedIn === true || g.isCheckedIn === 'true' || g.isCheckedIn === 1 || g.isCheckedIn === '1' ||
@@ -2034,6 +2095,8 @@ class CheckInApp {
                 statusEl.textContent = '⚪ 無進行中活動';
             }
             if (actionsBar) actionsBar.style.display = 'none';
+            const rankSummaryTag = document.getElementById('adminRankSummaryTag');
+            if (rankSummaryTag) rankSummaryTag.textContent = '👑 目前 VIP 統計：0 位';
             return;
         }
 
@@ -2048,6 +2111,16 @@ class CheckInApp {
         const checkedCount = this.guests.filter(g => g.isCheckedIn).length;
         const rate = totalGuests > 0 ? Math.round((checkedCount / totalGuests) * 1000) / 10 : 0;
         const dateStr = ev.eventDate ? new Date(ev.eventDate).toLocaleDateString('zh-TW', { year: 'numeric', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '未設定';
+
+        // 更新名冊與匯出功能卡片上的 VIP 統計標籤
+        const rankSummaryTag = document.getElementById('adminRankSummaryTag');
+        if (rankSummaryTag) {
+            const v1 = this.guests.filter(g => this.getGuestRank(g) === 1).length;
+            const v2 = this.guests.filter(g => this.getGuestRank(g) === 2).length;
+            const v3 = this.guests.filter(g => this.getGuestRank(g) === 3).length;
+            const hasCustom = !!(ev.rankRules || ev.RankRules);
+            rankSummaryTag.innerHTML = `👑 目前 VIP 統計：Rank 1 (${v1}人) ‧ Rank 2 (${v2}人) ‧ Rank 3 (${v3}人) ${hasCustom ? '<span style="color:#059669;font-weight:800;">[已套用本場自訂規則]</span>' : '<span style="color:#64748B;">[標準預設規則]</span>'}`;
+        }
 
         box.innerHTML = `
           <div class="admin-event-specs-grid">
@@ -2070,6 +2143,288 @@ class CheckInApp {
           </div>
           ${ev.description ? `<div style="font-size: 13px; color: #64748B; background: #F8FAF9; padding: 10px 14px; border-radius: 8px; border: 1px solid #E2EDE7; margin-bottom: 16px;">📝 <strong>活動簡介：</strong>${this.escapeHtml(ev.description)}</div>` : ''}
         `;
+    }
+
+    // =========================================================================
+    // EVENT CUSTOM RANK WEIGHTS & VIP HONOR ORDERING (尊榮排序與活動專屬職級規則)
+    // =========================================================================
+
+    /**
+     * 取得當前活動之自訂職級規則物件 (若未自訂則回退系統預設值)
+     */
+    getCurrentEventRankRules() {
+        const ev = this.events.find(e => e.eventId === this.currentEventId);
+        if (ev && (ev.rankRules || ev.RankRules)) {
+            try {
+                const rules = typeof ev.rankRules === 'string' ? JSON.parse(ev.rankRules) : (typeof ev.RankRules === 'string' ? JSON.parse(ev.RankRules) : (ev.rankRules || ev.RankRules));
+                if (rules && typeof rules === 'object') {
+                    return rules;
+                }
+            } catch (e) {
+                console.warn('解析活動專屬職級規則失敗，改用系統預設', e);
+            }
+        }
+        return JSON.parse(JSON.stringify(DEFAULT_RANK_RULES));
+    }
+
+    /**
+     * 計算職稱之職級權重 (使用當前活動自訂規則)
+     */
+    calculateRankWeight(title) {
+        return calculateRankWeightByRuleSet(title, this.getCurrentEventRankRules());
+    }
+
+    /**
+     * 取得貴賓之職級 (使用當前活動自訂規則)
+     */
+    getGuestRank(g) {
+        return getGuestRank(g, this.getCurrentEventRankRules());
+    }
+
+    /**
+     * 開啟活動職級權重尊榮排序設定彈窗
+     */
+    showRankWeightSettingsModal() {
+        if (!this.currentEventId) {
+            alert('⚠️ 目前尚無活動場次，請先點擊上方【➕ 建立新活動】！');
+            return;
+        }
+
+        const ev = this.events.find(e => e.eventId === this.currentEventId);
+        const nameDisplay = document.getElementById('rankSettingsEventNameDisplay');
+        if (nameDisplay) {
+            nameDisplay.textContent = ev ? ev.eventName : '當前活動';
+        }
+
+        const rules = this.getCurrentEventRankRules();
+        const r1Input = document.getElementById('rank1KeywordsInput');
+        const r2Input = document.getElementById('rank2KeywordsInput');
+        const r3Input = document.getElementById('rank3KeywordsInput');
+        const r4Input = document.getElementById('rank4KeywordsInput');
+
+        if (r1Input) r1Input.value = (rules.rank1Keywords || []).join(', ');
+        if (r2Input) r2Input.value = (rules.rank2Keywords || []).join(', ');
+        if (r3Input) r3Input.value = (rules.rank3Keywords || []).join(', ');
+        if (r4Input) r4Input.value = (rules.rank4Keywords || []).join(', ');
+
+        this.updateRankSettingsStatsDisplay();
+        this.renderRankGuestTuningTable();
+
+        const searchInput = document.getElementById('rankGuestSearchInput');
+        if (searchInput) searchInput.value = '';
+
+        const modal = document.getElementById('rankWeightSettingsModal');
+        if (modal) modal.classList.add('active');
+    }
+
+    /**
+     * 關閉職級權重尊榮排序設定彈窗
+     */
+    closeRankWeightSettingsModal() {
+        const modal = document.getElementById('rankWeightSettingsModal');
+        if (modal) modal.classList.remove('active');
+    }
+
+    /**
+     * 更新彈窗中各等級人數即時預覽
+     */
+    updateRankSettingsStatsDisplay(previewRules) {
+        const rules = previewRules || this.getCurrentEventRankRules();
+        let c1 = 0, c2 = 0, c3 = 0, c4 = 0;
+        
+        for (const g of this.guests) {
+            const r = getGuestRank(g, rules);
+            if (r === 1) c1++;
+            else if (r === 2) c2++;
+            else if (r === 3) c3++;
+            else c4++;
+        }
+
+        const el1 = document.getElementById('rank1CountDisplay');
+        const el2 = document.getElementById('rank2CountDisplay');
+        const el3 = document.getElementById('rank3CountDisplay');
+        const el4 = document.getElementById('rank4CountDisplay');
+
+        if (el1) el1.innerText = `特級長官 (${c1}人)`;
+        if (el2) el2.innerText = `副首長/民代/督導 (${c2}人)`;
+        if (el3) el3.innerText = `主管專家/學者講師 (${c3}人)`;
+        if (el4) el4.innerText = `一般貴賓/同仁 (${c4}人)`;
+    }
+
+    /**
+     * 一鍵套用行業職級範本
+     */
+    applyRankPreset(presetKey) {
+        const preset = RANK_PRESETS[presetKey] || DEFAULT_RANK_RULES;
+        const r1Input = document.getElementById('rank1KeywordsInput');
+        const r2Input = document.getElementById('rank2KeywordsInput');
+        const r3Input = document.getElementById('rank3KeywordsInput');
+        const r4Input = document.getElementById('rank4KeywordsInput');
+
+        if (r1Input) r1Input.value = (preset.rank1Keywords || []).join(', ');
+        if (r2Input) r2Input.value = (preset.rank2Keywords || []).join(', ');
+        if (r3Input) r3Input.value = (preset.rank3Keywords || []).join(', ');
+        if (r4Input) r4Input.value = (preset.rank4Keywords || []).join(', ');
+
+        const presetNames = {
+            hospital: '🏥 醫療院所與學會模式',
+            gov: '🏛️ 政府機關與官方典禮',
+            corporate: '🏢 企業高峰會與商務論壇',
+            default: '🔄 系統預設標準'
+        };
+
+        this.updateRankSettingsStatsDisplay(preset);
+        this.showToast(`已成功套用【${presetNames[presetKey] || '指定範本'}】關鍵字設定！`, 'info');
+    }
+
+    /**
+     * 重置輸入框為系統預設值
+     */
+    resetRankSettingsToDefault() {
+        this.applyRankPreset('default');
+    }
+
+    /**
+     * 渲染彈窗內貴賓個別快速調等清單
+     */
+    renderRankGuestTuningTable(filterText = '') {
+        const tbody = document.getElementById('rankGuestTuningTbody');
+        if (!tbody) return;
+
+        const q = (filterText || '').trim().toLowerCase();
+        let list = this.guests || [];
+        if (q) {
+            list = list.filter(g =>
+                (g.name && g.name.toLowerCase().includes(q)) ||
+                (g.title && g.title.toLowerCase().includes(q)) ||
+                (g.organization && g.organization.toLowerCase().includes(q)) ||
+                (g.guestId && g.guestId.toLowerCase().includes(q))
+            );
+        }
+
+        if (list.length === 0) {
+            tbody.innerHTML = `
+              <tr>
+                <td colspan="4" style="text-align: center; padding: 20px; color: var(--text-muted);">
+                  ${q ? `查無與「${this.escapeHtml(q)}」相符之貴賓` : '目前名冊尚無貴賓資料'}
+                </td>
+              </tr>
+            `;
+            return;
+        }
+
+        tbody.innerHTML = list.map(g => {
+            const currentRank = this.getGuestRank(g);
+            return `
+              <tr style="border-bottom: 1px solid #F1F5F9;">
+                <td style="padding: 7px 10px; font-weight: 700; color: var(--text-charcoal);">
+                  ${this.escapeHtml(g.name)}
+                  <span style="font-size: 10px; color: var(--text-muted); font-weight: 400; margin-left: 4px;">(${this.escapeHtml(g.guestId)})</span>
+                </td>
+                <td style="padding: 7px 10px; color: #475569;">${this.escapeHtml(g.organization || '-')}</td>
+                <td style="padding: 7px 10px; color: #334155; font-weight: 600;">${this.escapeHtml(g.title || '-')}</td>
+                <td style="padding: 7px 10px; text-align: center;">
+                  <select class="form-control" style="font-size: 11.5px; padding: 3px 6px; border-radius: 6px; font-weight: 700; display: inline-block; width: auto;" onchange="app.changeGuestRankDirect('${this.escapeHtml(g.guestId)}', this.value)">
+                    <option value="1" ${currentRank === 1 ? 'selected' : ''}>🥇 Rank 1 - 特級長官</option>
+                    <option value="2" ${currentRank === 2 ? 'selected' : ''}>🥈 Rank 2 - 副首長/民代/督導</option>
+                    <option value="3" ${currentRank === 3 ? 'selected' : ''}>🥉 Rank 3 - 主管專家/學者講師</option>
+                    <option value="4" ${currentRank === 4 ? 'selected' : ''}>👥 Rank 4 - 一般貴賓/同仁</option>
+                  </select>
+                </td>
+              </tr>
+            `;
+        }).join('');
+    }
+
+    /**
+     * 篩選彈窗內貴賓個別調等清單
+     */
+    filterRankSettingsGuests() {
+        const input = document.getElementById('rankGuestSearchInput');
+        const q = input ? input.value : '';
+        this.renderRankGuestTuningTable(q);
+    }
+
+    /**
+     * 直接微調單一貴賓職級權重
+     */
+    async changeGuestRankDirect(guestId, newRank) {
+        const rankNum = parseInt(newRank, 10);
+        if (isNaN(rankNum) || rankNum < 1 || rankNum > 4) return;
+
+        try {
+            await window.apiService.updateGuestRank(this.currentEventId, guestId, rankNum);
+            const target = this.guests.find(g => g.guestId === guestId);
+            if (target) {
+                target.rankWeight = rankNum;
+                this.updateStatsLocally();
+                this.renderAllViews();
+            }
+            this.updateRankSettingsStatsDisplay();
+            this.showToast(`貴賓尊榮職級已更新為 Rank ${rankNum}！`, 'success');
+        } catch (err) {
+            alert(err.message || '更新貴賓職級失敗');
+            this.renderRankGuestTuningTable();
+        }
+    }
+
+    /**
+     * 儲存本場活動專屬職級權重規則
+     */
+    async handleSaveRankSettings(e) {
+        if (e) e.preventDefault();
+        if (!this.currentEventId) return;
+
+        const parseKws = (val) => {
+            return (val || '')
+                .split(/[,，|、\n\r]+/)
+                .map(s => s.trim())
+                .filter(s => s.length > 0);
+        };
+
+        const r1Input = document.getElementById('rank1KeywordsInput');
+        const r2Input = document.getElementById('rank2KeywordsInput');
+        const r3Input = document.getElementById('rank3KeywordsInput');
+        const r4Input = document.getElementById('rank4KeywordsInput');
+        const chkRecalc = document.getElementById('chkRecalculateOnSave');
+        const submitBtn = document.getElementById('btnSaveRankRules');
+
+        const rankRulesObj = {
+            rank1Keywords: parseKws(r1Input?.value),
+            rank2Keywords: parseKws(r2Input?.value),
+            rank3Keywords: parseKws(r3Input?.value),
+            rank4Keywords: parseKws(r4Input?.value)
+        };
+
+        const rankRulesJson = JSON.stringify(rankRulesObj);
+        const recalculate = chkRecalc ? chkRecalc.checked : true;
+
+        try {
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<span>⏳ 儲存並重新計算中...</span>';
+            }
+
+            const res = await window.apiService.updateRankRules(this.currentEventId, rankRulesJson, recalculate);
+            
+            // 更新本地活動物件
+            const ev = this.events.find(ev => ev.eventId === this.currentEventId);
+            if (ev) {
+                ev.rankRules = rankRulesJson;
+            }
+
+            // 重新載入最新名冊與統計
+            await this.loadGuestsAndStats();
+            this.closeRankWeightSettingsModal();
+            this.showToast(res.message || '🎉 專屬職級規則已成功套用！', 'success');
+        } catch (err) {
+            alert(err.message || '儲存職級規則失敗');
+        } finally {
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<span>💾 儲存並套用此活動規則</span>';
+            }
+        }
     }
 
     // =========================================================================
@@ -2227,12 +2582,7 @@ class CheckInApp {
             const table = tableCol !== -1 ? String(row[tableCol] || '').trim() : '未排桌';
             const phone = phoneCol !== -1 ? String(row[phoneCol] || '').trim() : '';
 
-            let rankWeight = 3;
-            if (title.includes('照專') && !title.includes('督導')) rankWeight = 4;
-            else if (/院長|局長|部長|署長|董事長|總裁/.test(title)) rankWeight = 1;
-            else if (/副院長|議員|立委|代表|組長|督導/.test(title)) rankWeight = 2;
-            else if (/主任|教授|醫師|處長|學者|專家|講師/.test(title)) rankWeight = 3;
-            else rankWeight = 4;
+            const rankWeight = this.calculateRankWeight(title);
 
             const guestObj = {
                 guestId: rawId || `G-${String(this.guests.length + i).padStart(3, '0')}`,
@@ -2333,12 +2683,7 @@ class CheckInApp {
             return;
         }
 
-        let rankWeight = 3;
-        if (title.includes('照專') && !title.includes('督導')) rankWeight = 4;
-        else if (/院長|局長|部長|署長|董事長|總裁/.test(title || '')) rankWeight = 1;
-        else if (/副院長|議員|立委|代表|組長|督導/.test(title || '')) rankWeight = 2;
-        else if (/主任|教授|醫師|處長|學者|專家|講師/.test(title || '')) rankWeight = 3;
-        else rankWeight = 4;
+        const rankWeight = this.calculateRankWeight(title);
 
         try {
             await window.apiService.addGuest(this.currentEventId, {

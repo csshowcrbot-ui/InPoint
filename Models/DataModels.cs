@@ -10,6 +10,10 @@ public class Event
     public bool IsActive { get; set; } = true;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public string? OwnerUsername { get; set; } // 所屬會員帳號 / 建立者 (管理者為 null 或 "admin")
+    /// <summary>
+    /// 自訂職級權重尊榮排序規則 (JSON，可針對每個活動自行定義 Rank 1 ~ Rank 4 關鍵字與標籤)
+    /// </summary>
+    public string? RankRules { get; set; }
 }
 
 public class Guest
@@ -229,3 +233,15 @@ public class SelfCheckInRequest
     public string Identifier { get; set; } = string.Empty;
     public string? GuestName { get; set; }
 }
+
+public class UpdateRankRulesRequest
+{
+    public string RankRules { get; set; } = string.Empty;
+    public bool RecalculateExistingGuests { get; set; } = true;
+}
+
+public class UpdateGuestRankRequest
+{
+    public int RankWeight { get; set; } = 3;
+}
+
