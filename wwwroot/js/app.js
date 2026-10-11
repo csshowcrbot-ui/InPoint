@@ -433,9 +433,18 @@ class CheckInApp {
                     planBadge.innerText = '👑 機構年度 (1500人/多場次)';
                 }
             } else {
+                const maxG = user.maxGuestsPerEvent || 100;
                 if (planBadge) {
-                    planBadge.className = 'plan-badge-single';
-                    planBadge.innerText = '🌟 單場活動 (500人/7天)';
+                    if (user.planType === 'SingleEvent_Light' || maxG <= 100) {
+                        planBadge.className = 'plan-badge-light';
+                        planBadge.innerText = '🟢 單場-輕量級 (100人/7天)';
+                    } else if (user.planType === 'SingleEvent_Standard' || maxG <= 300) {
+                        planBadge.className = 'plan-badge-standard';
+                        planBadge.innerText = '🔵 單場-標準級 (300人/7天)';
+                    } else {
+                        planBadge.className = 'plan-badge-flagship';
+                        planBadge.innerText = '🟣 單場-旗艦級 (600人/7天)';
+                    }
                 }
             }
 
@@ -484,7 +493,7 @@ class CheckInApp {
         const expiringBox = document.getElementById('memberStatExpiring');
 
         const total = this.members.length;
-        const single = this.members.filter(m => m.planType === 'SingleEvent').length;
+        const single = this.members.filter(m => m.planType !== 'AnnualOrg' && m.role !== 'Admin').length;
         const annual = this.members.filter(m => m.planType === 'AnnualOrg').length;
         const expiring = this.members.filter(m => m.isExpired || m.remainingDays <= 3).length;
 
@@ -510,10 +519,20 @@ class CheckInApp {
         }
 
         tbody.innerHTML = members.map(m => {
-            const isSingle = m.planType === 'SingleEvent';
-            const planBadge = isSingle
-                ? `<span class="plan-badge-single" title="單一場次授權、7天有效、上限500人">🌟 單場活動 (500人/7天)</span>`
-                : `<span class="plan-badge-annual" title="無限場次、1500人上限、範本複製">👑 機構年度 (1500人/無限場次/範本複製)</span>`;
+            const isSingle = m.planType !== 'AnnualOrg';
+            let planBadge = '';
+            if (!isSingle) {
+                planBadge = `<span class="plan-badge-annual" title="無限場次、1500人上限、範本複製">👑 機構年度 (1500人/多場次)</span>`;
+            } else {
+                const maxG = m.maxGuestsPerEvent || 100;
+                if (m.planType === 'SingleEvent_Light' || maxG <= 100) {
+                    planBadge = `<span class="plan-badge-light" title="適合小型研習、主管會報、單科學會例會 (NT$ 1,990 / 場)">🟢 單場-輕量級 (100人/7天)</span>`;
+                } else if (m.planType === 'SingleEvent_Standard' || maxG <= 300) {
+                    planBadge = `<span class="plan-badge-standard" title="適合區域醫院院慶、中型醫學研討會 (NT$ 3,490 / 場)">🔵 單場-標準級 (300人/7天)</span>`;
+                } else {
+                    planBadge = `<span class="plan-badge-flagship" title="適合大型年會、正式典禮 (NT$ 5,490 / 場)">🟣 單場-旗艦級 (600人/7天)</span>`;
+                }
+            }
 
             let expireDateStr = '永久有效';
             let isExpired = false;
@@ -591,7 +610,7 @@ class CheckInApp {
     }
 
     showCreateMemberModal() {
-        this.selectPlanOption('SingleEvent');
+        this.selectPlanOption('SingleEvent_Light');
         const modal = document.getElementById('createMemberModal');
         if (modal) modal.classList.add('active');
 
@@ -610,25 +629,55 @@ class CheckInApp {
     }
 
     selectPlanOption(planType) {
-        const singleCard = document.getElementById('planOptionSingle');
-        const annualCard = document.getElementById('planOptionAnnual');
+        const cardLight = document.getElementById('planOptionSingleLight');
+        const cardStandard = document.getElementById('planOptionSingleStandard');
+        const cardFlagship = document.getElementById('planOptionSingleFlagship');
+        const cardAnnual = document.getElementById('planOptionAnnual');
         const planInput = document.getElementById('createMemberPlanType');
         const maxGuestsInput = document.getElementById('createMemberMaxGuests');
         const expireInput = document.getElementById('createMemberExpireAt');
+        const notesInput = document.getElementById('createMemberNotes');
 
-        if (planInput) planInput.value = planType;
+        // Clear all selected highlights
+        [cardLight, cardStandard, cardFlagship, cardAnnual].forEach(c => {
+            if (c) c.classList.remove('selected');
+        });
 
         const d = new Date();
+
         if (planType === 'AnnualOrg') {
-            if (singleCard) singleCard.classList.remove('selected');
-            if (annualCard) annualCard.classList.add('selected');
+            if (cardAnnual) cardAnnual.classList.add('selected');
+            if (planInput) planInput.value = 'AnnualOrg';
             if (maxGuestsInput) maxGuestsInput.value = '1500';
             d.setFullYear(d.getFullYear() + 1);
-        } else {
-            if (annualCard) annualCard.classList.remove('selected');
-            if (singleCard) singleCard.classList.add('selected');
-            if (maxGuestsInput) maxGuestsInput.value = '500';
+            if (notesInput && (!notesInput.value || notesInput.value.includes('研習') || notesInput.value.includes('年會'))) {
+                notesInput.value = '2026 年度機構研討會完整授權';
+            }
+        } else if (planType === 'SingleEvent_Standard') {
+            if (cardStandard) cardStandard.classList.add('selected');
+            if (planInput) planInput.value = 'SingleEvent_Standard';
+            if (maxGuestsInput) maxGuestsInput.value = '300';
             d.setDate(d.getDate() + 7);
+            if (notesInput && (!notesInput.value || notesInput.value.includes('研習') || notesInput.value.includes('年會') || notesInput.value.includes('機構'))) {
+                notesInput.value = '區域醫院院慶/中型研討會授權 (標準級)';
+            }
+        } else if (planType === 'SingleEvent_Flagship') {
+            if (cardFlagship) cardFlagship.classList.add('selected');
+            if (planInput) planInput.value = 'SingleEvent_Flagship';
+            if (maxGuestsInput) maxGuestsInput.value = '600';
+            d.setDate(d.getDate() + 7);
+            if (notesInput && (!notesInput.value || notesInput.value.includes('研習') || notesInput.value.includes('院慶') || notesInput.value.includes('機構'))) {
+                notesInput.value = '大型年會/正式典禮授權 (旗艦級)';
+            }
+        } else {
+            // Default: SingleEvent_Light
+            if (cardLight) cardLight.classList.add('selected');
+            if (planInput) planInput.value = 'SingleEvent_Light';
+            if (maxGuestsInput) maxGuestsInput.value = '100';
+            d.setDate(d.getDate() + 7);
+            if (notesInput && (!notesInput.value || notesInput.value.includes('院慶') || notesInput.value.includes('年會') || notesInput.value.includes('機構'))) {
+                notesInput.value = '小型研習/主管會報授權 (輕量級)';
+            }
         }
 
         if (expireInput) expireInput.value = d.toISOString().split('T')[0];
@@ -640,9 +689,9 @@ class CheckInApp {
         const password = document.getElementById('createMemberPassword')?.value.trim();
         const org = document.getElementById('createMemberOrg')?.value.trim();
         const displayName = document.getElementById('createMemberDisplayName')?.value.trim();
-        const planType = document.getElementById('createMemberPlanType')?.value || 'SingleEvent';
+        const planType = document.getElementById('createMemberPlanType')?.value || 'SingleEvent_Light';
         const expireAt = document.getElementById('createMemberExpireAt')?.value;
-        const maxGuests = parseInt(document.getElementById('createMemberMaxGuests')?.value, 10) || 500;
+        const maxGuests = parseInt(document.getElementById('createMemberMaxGuests')?.value, 10) || 100;
         const notes = document.getElementById('createMemberNotes')?.value.trim();
 
         if (!username || !password || !org || !expireAt) {
@@ -678,7 +727,16 @@ class CheckInApp {
         document.getElementById('editMemberUsername').value = member.username;
         document.getElementById('editMemberOrg').value = member.organization || '';
         document.getElementById('editMemberDisplayName').value = member.displayName || '';
-        document.getElementById('editMemberPlanType').value = member.planType;
+
+        // Map planType to the 3 single tiers or AnnualOrg
+        let mappedPlanType = member.planType;
+        if (member.planType === 'SingleEvent' || !member.planType) {
+            const mg = member.maxGuestsPerEvent || 100;
+            if (mg <= 100) mappedPlanType = 'SingleEvent_Light';
+            else if (mg <= 300) mappedPlanType = 'SingleEvent_Standard';
+            else mappedPlanType = 'SingleEvent_Flagship';
+        }
+        document.getElementById('editMemberPlanType').value = mappedPlanType;
         document.getElementById('editMemberMaxGuests').value = member.maxGuestsPerEvent;
         document.getElementById('editMemberIsActive').value = member.isActive ? 'true' : 'false';
         document.getElementById('editMemberNotes').value = member.notes || '';
@@ -702,8 +760,14 @@ class CheckInApp {
         const maxGuestsInput = document.getElementById('editMemberMaxGuests');
         if (plan === 'AnnualOrg') {
             maxGuestsInput.value = '1500';
+        } else if (plan === 'SingleEvent_Light') {
+            maxGuestsInput.value = '100';
+        } else if (plan === 'SingleEvent_Standard') {
+            maxGuestsInput.value = '300';
+        } else if (plan === 'SingleEvent_Flagship') {
+            maxGuestsInput.value = '600';
         } else {
-            maxGuestsInput.value = '500';
+            maxGuestsInput.value = '300';
         }
     }
 
@@ -818,16 +882,25 @@ class CheckInApp {
             if (bannerOrg) bannerOrg.innerText = user.organization || '無單位';
             if (bannerUser) bannerUser.innerText = `${user.displayName || user.username} (@${user.username})`;
             if (bannerPlan) {
-                bannerPlan.innerHTML = user.planType === 'AnnualOrg'
-                    ? '<span class="plan-badge-annual" style="font-size: 11px;">👑 機構年度 (1500人/多場次)</span>'
-                    : '<span class="plan-badge-single" style="font-size: 11px;">🌟 單場活動 (500人/7天)</span>';
+                if (user.planType === 'AnnualOrg') {
+                    bannerPlan.innerHTML = '<span class="plan-badge-annual" style="font-size: 11px;">👑 機構年度 (1500人/多場次)</span>';
+                } else {
+                    const maxG = user.maxGuestsPerEvent || 100;
+                    if (user.planType === 'SingleEvent_Light' || maxG <= 100) {
+                        bannerPlan.innerHTML = '<span class="plan-badge-light" style="font-size: 11px;">🟢 單場-輕量級 (100人/7天)</span>';
+                    } else if (user.planType === 'SingleEvent_Standard' || maxG <= 300) {
+                        bannerPlan.innerHTML = '<span class="plan-badge-standard" style="font-size: 11px;">🔵 單場-標準級 (300人/7天)</span>';
+                    } else {
+                        bannerPlan.innerHTML = '<span class="plan-badge-flagship" style="font-size: 11px;">🟣 單場-旗艦級 (600人/7天)</span>';
+                    }
+                }
             }
             if (bannerExpire) {
                 bannerExpire.innerText = user.expireAt ? new Date(user.expireAt).toLocaleDateString() : '永久有效';
             }
 
             if (countText) {
-                countText.innerText = `共 ${events.length} 場活動` + (user.planType === 'SingleEvent' ? ` (上限 1 場)` : ` (無上限)`);
+                countText.innerText = `共 ${events.length} 場活動` + (user.planType !== 'AnnualOrg' ? ` (上限 1 場)` : ` (無上限)`);
             }
 
             this.renderMemberEventsList(user, events);
@@ -1078,7 +1151,7 @@ class CheckInApp {
 
     showCreateEventModal() {
         const user = window.apiService.currentUser;
-        if (user && user.role !== 'Admin' && user.planType === 'SingleEvent' && this.events.length >= 1) {
+        if (user && user.role !== 'Admin' && user.planType !== 'AnnualOrg' && this.events.length >= 1) {
             alert('⚠️ 您目前的【單場活動方案】僅限建立 1 場活動！\n\n如需舉辦多場活動或使用範本複製功能，請升級為【機構年度方案】！');
             return;
         }
@@ -1133,7 +1206,7 @@ class CheckInApp {
 
     showCloneEventModal() {
         const user = window.apiService.currentUser;
-        if (user && user.role !== 'Admin' && user.planType === 'SingleEvent') {
+        if (user && user.role !== 'Admin' && user.planType !== 'AnnualOrg') {
             alert('⚠️ 「範本複製」為【機構年度方案】與管理者尊榮專屬功能！\n\n可一鍵複製歷史活動設定、地點與名冊結構，請升級為機構年度方案以享有此功能！');
             return;
         }

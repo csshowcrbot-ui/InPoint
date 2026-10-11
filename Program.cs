@@ -654,10 +654,19 @@ app.MapPost("/api/members", async (CreateMemberRequest req, HttpContext ctx, IEv
         return Results.BadRequest(new { success = false, message = $"帳號「{req.Username}」已存在，請使用其他帳號！" });
     }
 
-    var planType = req.PlanType == "AnnualOrg" ? "AnnualOrg" : "SingleEvent";
-    int defaultDays = planType == "AnnualOrg" ? 365 : 7;
-    int maxGuests = req.MaxGuestsPerEvent ?? (planType == "AnnualOrg" ? 1500 : 500);
-    int maxEvents = planType == "AnnualOrg" ? -1 : 1;
+    bool isAnnual = req.PlanType == "AnnualOrg";
+    string planType = isAnnual ? "AnnualOrg" : (string.IsNullOrWhiteSpace(req.PlanType) ? "SingleEvent_Light" : req.PlanType);
+    int defaultDays = isAnnual ? 365 : 7;
+    int defaultMaxGuests = planType switch
+    {
+        "SingleEvent_Light" => 100,
+        "SingleEvent_Standard" => 300,
+        "SingleEvent_Flagship" => 600,
+        "AnnualOrg" => 1500,
+        _ => 100
+    };
+    int maxGuests = req.MaxGuestsPerEvent ?? defaultMaxGuests;
+    int maxEvents = isAnnual ? -1 : 1;
 
     DateTime expireAt;
     if (req.ExpireAt.HasValue)
@@ -720,10 +729,17 @@ app.MapPut("/api/members/{userId}", async (string userId, UpdateMemberRequest re
     if (req.MaxGuestsPerEvent.HasValue && req.MaxGuestsPerEvent.Value > 0)
     {
         user.MaxGuestsPerEvent = req.MaxGuestsPerEvent.Value;
+        user.MaxEvents = (user.PlanType == "AnnualOrg") ? -1 : 1;
     }
-    else if (req.PlanType == "SingleEvent")
+    else if (req.PlanType != null && (req.PlanType.StartsWith("SingleEvent") || req.PlanType != "AnnualOrg"))
     {
-        user.MaxGuestsPerEvent = 500;
+        user.MaxGuestsPerEvent = req.PlanType switch
+        {
+            "SingleEvent_Light" => 100,
+            "SingleEvent_Standard" => 300,
+            "SingleEvent_Flagship" => 600,
+            _ => 100
+        };
         user.MaxEvents = 1;
     }
     else if (req.PlanType == "AnnualOrg")
@@ -973,7 +989,7 @@ async Task<IResult> HandleCreateEvent(CreateEventRequest? req, HttpContext ctx, 
             });
         }
 
-        if (session.PlanType == "SingleEvent")
+        if (session.PlanType != "AnnualOrg" && session.PlanType != "Unlimited")
         {
             var currentEventCount = await service.GetUserEventCountAsync(session.Username);
             if (currentEventCount >= 1)
@@ -1023,7 +1039,7 @@ app.MapPost("/api/events/{id}/clone", async (string id, CloneEventRequest req, H
 
     if (!isAdmin && session != null)
     {
-        if (session.PlanType == "SingleEvent")
+        if (session.PlanType != "AnnualOrg" && session.PlanType != "Unlimited")
         {
             return Results.BadRequest(new
             {

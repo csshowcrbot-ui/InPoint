@@ -42,11 +42,14 @@ public class User
     public string DisplayName { get; set; } = string.Empty;
     public string Organization { get; set; } = string.Empty;
     /// <summary>
-    /// 方案類型: "SingleEvent" (單場活動), "AnnualOrg" (機構年度), "Unlimited" (管理員)
+    /// 方案類型: 
+    /// 單場活動: "SingleEvent_Light" (輕量級 100人以內 NT$ 1,990), "SingleEvent_Standard" (標準級 101~300人 NT$ 3,490), "SingleEvent_Flagship" (旗艦級 301~600人 NT$ 5,490), "SingleEvent" (相容舊單場)
+    /// 機構年度: "AnnualOrg" (1500人 / 365天 / 無限場次 / 範本複製)
+    /// 管理員: "Unlimited"
     /// </summary>
-    public string PlanType { get; set; } = "SingleEvent";
+    public string PlanType { get; set; } = "SingleEvent_Light";
     public DateTime? ExpireAt { get; set; } // 會員有效期限
-    public int MaxGuestsPerEvent { get; set; } = 500; // 單場活動 500 人 / 機構年度 1500 人
+    public int MaxGuestsPerEvent { get; set; } = 100; // 單場活動 (100 / 300 / 600 人) / 機構年度 1500 人
     public int MaxEvents { get; set; } = 1; // 單場活動 1 場 / 機構年度 -1 (無限制)
     public bool IsActive { get; set; } = true;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
@@ -91,7 +94,7 @@ public class CreateMemberRequest
     public string Password { get; set; } = string.Empty;
     public string DisplayName { get; set; } = string.Empty;
     public string Organization { get; set; } = string.Empty;
-    public string PlanType { get; set; } = "SingleEvent"; // "SingleEvent" or "AnnualOrg"
+    public string PlanType { get; set; } = "SingleEvent_Light"; // "SingleEvent_Light", "SingleEvent_Standard", "SingleEvent_Flagship", "AnnualOrg"
     public DateTime? ExpireAt { get; set; }
     public int? ExpireDays { get; set; }
     public int? MaxGuestsPerEvent { get; set; }
