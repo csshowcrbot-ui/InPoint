@@ -1568,6 +1568,10 @@ app.MapPut("/api/events/{id}/guests/{gId}/rank", async (string id, string gId, U
 
 app.MapGet("/api/events/{id}/export", async (string id, HttpContext ctx, IEventService service) =>
 {
+    ctx.Response.Headers.CacheControl = "no-cache, no-store, must-revalidate";
+    ctx.Response.Headers.Pragma = "no-cache";
+    ctx.Response.Headers.Expires = "0";
+
     var ev = await service.GetEventByIdAsync(id);
     if (ev == null)
     {

@@ -565,8 +565,8 @@ class ApiService {
     }
 
     getExportUrl(eventId) {
-        const tokenParam = this.token ? `?token=${encodeURIComponent(this.token)}` : '';
-        return `${this.apiBase}api/events/${encodeURIComponent(eventId)}/export${tokenParam}`;
+        const tokenParam = this.token ? `token=${encodeURIComponent(this.token)}&` : '';
+        return `${this.apiBase}api/events/${encodeURIComponent(eventId)}/export?${tokenParam}_t=${Date.now()}`;
     }
 }
 
