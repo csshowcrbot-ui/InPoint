@@ -1,5 +1,6 @@
 using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
+using ShowChwanCheckIn.Common;
 using ShowChwanCheckIn.Data;
 using ShowChwanCheckIn.Models;
 
@@ -51,7 +52,7 @@ public class SqlEventService : IEventService
         await using var db = await _dbFactory.CreateDbContextAsync();
         if (string.IsNullOrWhiteSpace(newEvent.EventId))
         {
-            newEvent.EventId = $"event_{DateTime.Now:yyyyMMdd_HHmmss}_{Guid.NewGuid().ToString("N")[..6]}";
+            newEvent.EventId = $"event_{TaiwanTime.Now:yyyyMMdd_HHmmss}_{Guid.NewGuid().ToString("N")[..6]}";
         }
         newEvent.CreatedAt = DateTime.UtcNow;
         db.Events.Add(newEvent);
@@ -114,7 +115,7 @@ public class SqlEventService : IEventService
         await using var db = await _dbFactory.CreateDbContextAsync();
         var sourceEv = await db.Events.FirstOrDefaultAsync(e => e.EventId == sourceEventId);
 
-        var newId = $"event_{DateTime.Now:yyyyMMdd_HHmmss}_{Guid.NewGuid().ToString("N")[..6]}";
+        var newId = $"event_{TaiwanTime.Now:yyyyMMdd_HHmmss}_{Guid.NewGuid().ToString("N")[..6]}";
         var newEvent = new Event
         {
             EventId = newId,
@@ -518,13 +519,13 @@ public class SqlEventService : IEventService
 
         var sb = new System.Text.StringBuilder();
         sb.AppendLine($"# 活動報到名冊 - {eventName}");
-        sb.AppendLine($"# 匯出時間：{DateTime.Now:yyyy/MM/dd HH:mm:ss}");
+        sb.AppendLine($"# 匯出時間：{TaiwanTime.Now:yyyy/MM/dd HH:mm:ss}");
         sb.AppendLine("貴賓編號,姓名,服務單位,職稱,職級權重,桌次/座位,報到狀態,報到時間,經手人員,專屬QR碼,電話,備註");
 
         foreach (var g in guests)
         {
             var checkInStatus = g.IsCheckedIn ? "已報到" : "未報到";
-            var checkInTime = g.CheckedInAt.HasValue ? g.CheckedInAt.Value.ToString("yyyy/MM/dd HH:mm:ss") : "";
+            var checkInTime = g.CheckedInAt.HasValue ? g.CheckedInAt.ToTaiwanTimeString("yyyy/MM/dd HH:mm:ss") : "";
             var rankDesc = g.RankWeight switch
             {
                 1 => "1-特級長官/院長",
@@ -584,7 +585,7 @@ public class SqlEventService : IEventService
 
             result.Add(new Guest
             {
-                GuestId = $"IMP-{DateTime.Now:HHmmss}-{autoId++:D2}",
+                GuestId = $"IMP-{TaiwanTime.Now:HHmmss}-{autoId++:D2}",
                 EventId = eventId,
                 Name = name,
                 Organization = org,
@@ -624,7 +625,7 @@ public class SqlEventService : IEventService
                 sb.AppendLine($"🟢 **已到場貴賓：**");
                 foreach (var g in checkedVips)
                 {
-                    sb.AppendLine($"- ✅ 【{g.Organization}】{g.Title} **{g.Name}**（桌次：{g.TableNo} / 報到時間：{g.CheckedInAt:HH:mm}）");
+                    sb.AppendLine($"- ✅ 【{g.Organization}】{g.Title} **{g.Name}**（桌次：{g.TableNo} / 報到時間：{g.CheckedInAt.ToTaiwanTimeString("HH:mm")}）");
                 }
                 sb.AppendLine();
             }
@@ -676,7 +677,7 @@ public class SqlEventService : IEventService
             {
                 serviceMode = "SqlEventService (Live SQL Server)",
                 databaseType = "Microsoft SQL Server",
-                serverTime = DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss"),
+                serverTime = TaiwanTime.Now.ToString("yyyy/MM/dd HH:mm:ss"),
                 machineName = Environment.MachineName,
                 canConnect,
                 provider = db.Database.ProviderName,
@@ -694,7 +695,7 @@ public class SqlEventService : IEventService
             {
                 serviceMode = "SqlEventService (Error Connecting)",
                 databaseType = "Microsoft SQL Server",
-                serverTime = DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss"),
+                serverTime = TaiwanTime.Now.ToString("yyyy/MM/dd HH:mm:ss"),
                 machineName = Environment.MachineName,
                 canConnect = false,
                 errorMessage = ex.Message,

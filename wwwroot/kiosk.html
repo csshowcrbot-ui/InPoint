@@ -877,8 +877,8 @@
 
         if (guests) {
           const arrived = guests.filter(g => g.isCheckedIn).sort((a, b) => {
-            const timeA = a.checkedInAt ? new Date(a.checkedInAt).getTime() : 0;
-            const timeB = b.checkedInAt ? new Date(b.checkedInAt).getTime() : 0;
+            const timeA = a.checkedInAt ? (parseUtcDate(a.checkedInAt)?.getTime() || 0) : 0;
+            const timeB = b.checkedInAt ? (parseUtcDate(b.checkedInAt)?.getTime() || 0) : 0;
             return timeB - timeA;
           });
           renderArrivalsList(arrived, stats ? stats.totalGuests : guests.length);
@@ -967,8 +967,10 @@
         // Format check-in time nicely
         let timeStr = '已完成報到';
         if (g.checkedInAt) {
-          const d = new Date(g.checkedInAt);
-          timeStr = `⏱️ ${d.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`;
+          const d = parseUtcDate(g.checkedInAt);
+          if (d && !isNaN(d.getTime())) {
+            timeStr = `⏱️ ${d.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`;
+          }
         }
 
         const staffText = g.checkedInBy ? `<span style="font-size:11px; opacity:0.8; margin-left:4px;">(${escapeHtml(g.checkedInBy)})</span>` : '';
@@ -1040,6 +1042,17 @@
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#039;');
+    }
+
+    function parseUtcDate(val) {
+      if (!val) return null;
+      if (val instanceof Date) return val;
+      let s = String(val).trim();
+      if (s.includes('T') && !s.endsWith('Z') && !/[+-]\d{2}:?\d{2}$/.test(s)) {
+        s += 'Z';
+      }
+      const d = new Date(s);
+      return isNaN(d.getTime()) ? null : d;
     }
 
     function toggleFullScreen() {

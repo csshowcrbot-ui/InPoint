@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using ShowChwanCheckIn.Common;
 using ShowChwanCheckIn.Models;
 
 namespace ShowChwanCheckIn.Services;
@@ -341,7 +342,7 @@ public class InMemoryEventService : IEventService
     {
         if (string.IsNullOrWhiteSpace(newEvent.EventId))
         {
-            newEvent.EventId = $"event_{DateTime.Now:yyyyMMdd_HHmmss}_{Guid.NewGuid().ToString("N")[..6]}";
+            newEvent.EventId = $"event_{TaiwanTime.Now:yyyyMMdd_HHmmss}_{Guid.NewGuid().ToString("N")[..6]}";
         }
         newEvent.CreatedAt = DateTime.UtcNow;
         _events[newEvent.EventId] = newEvent;
@@ -391,7 +392,7 @@ public class InMemoryEventService : IEventService
     public Task<Event> CloneEventAsync(string sourceEventId, string newEventName, DateTime newEventDate, string? location, string? description, bool copyGuests, string? ownerUsername)
     {
         _events.TryGetValue(sourceEventId, out var sourceEv);
-        var newId = $"event_{DateTime.Now:yyyyMMdd_HHmmss}_{Guid.NewGuid().ToString("N")[..6]}";
+        var newId = $"event_{TaiwanTime.Now:yyyyMMdd_HHmmss}_{Guid.NewGuid().ToString("N")[..6]}";
 
         var newEvent = new Event
         {
@@ -589,7 +590,7 @@ public class InMemoryEventService : IEventService
             guest.IsCheckedIn = newStatus;
             if (newStatus)
             {
-                guest.CheckedInAt = DateTime.Now;
+                guest.CheckedInAt = DateTime.UtcNow;
                 guest.CheckedInBy = staffName;
             }
             else
@@ -756,7 +757,7 @@ public class InMemoryEventService : IEventService
 
         var sb = new System.Text.StringBuilder();
         sb.AppendLine($"# 活動報到名冊 - {eventName}");
-        sb.AppendLine($"# 匯出時間：{DateTime.Now:yyyy/MM/dd HH:mm:ss}");
+        sb.AppendLine($"# 匯出時間：{TaiwanTime.Now:yyyy/MM/dd HH:mm:ss}");
         sb.AppendLine("貴賓編號,姓名,服務單位,職稱,職級權重,桌次/座位,報到狀態,報到時間,經手人員,專屬QR碼,電話,備註");
 
         if (_guests.TryGetValue(eventId, out var map))
@@ -769,7 +770,7 @@ public class InMemoryEventService : IEventService
             foreach (var g in sorted)
             {
                 var checkInStatus = g.IsCheckedIn ? "已報到" : "未報到";
-                var checkInTime = g.CheckedInAt.HasValue ? g.CheckedInAt.Value.ToString("yyyy/MM/dd HH:mm:ss") : "";
+                var checkInTime = g.CheckedInAt.HasValue ? g.CheckedInAt.ToTaiwanTimeString("yyyy/MM/dd HH:mm:ss") : "";
                 var rankDesc = g.RankWeight switch
                 {
                     1 => "1-特級長官/院長",
@@ -830,7 +831,7 @@ public class InMemoryEventService : IEventService
 
             result.Add(new Guest
             {
-                GuestId = $"IMP-{DateTime.Now:HHmmss}-{autoId++:D2}",
+                GuestId = $"IMP-{TaiwanTime.Now:HHmmss}-{autoId++:D2}",
                 EventId = eventId,
                 Name = name,
                 Organization = org,
@@ -869,7 +870,7 @@ public class InMemoryEventService : IEventService
                 sb.AppendLine($"🟢 **已到場貴賓：**");
                 foreach (var g in checkedVips)
                 {
-                    sb.AppendLine($"- ✅ 【{g.Organization}】{g.Title} **{g.Name}**（桌次：{g.TableNo} / 報到時間：{g.CheckedInAt:HH:mm}）");
+                    sb.AppendLine($"- ✅ 【{g.Organization}】{g.Title} **{g.Name}**（桌次：{g.TableNo} / 報到時間：{g.CheckedInAt.ToTaiwanTimeString("HH:mm")}）");
                 }
                 sb.AppendLine();
             }
@@ -913,7 +914,7 @@ public class InMemoryEventService : IEventService
         {
             serviceMode = "InMemoryEventService (Local JSON Storage)",
             databaseType = "JSON File Persistence",
-            serverTime = DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss"),
+            serverTime = TaiwanTime.Now.ToString("yyyy/MM/dd HH:mm:ss"),
             machineName = Environment.MachineName,
             storageDirectories = _storageDirs,
             eventsCount = _events.Count,

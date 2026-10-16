@@ -401,9 +401,21 @@
       `;
 
       document.getElementById('guestTableNo').textContent = guest.tableNo || '未排桌';
+      const parsedD = parseUtcDate(guest.checkedInAt);
       document.getElementById('checkInTimeText').textContent = isAlready 
-        ? `報到狀態：已完成 (入場時間：${guest.checkedInAt ? new Date(guest.checkedInAt).toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' }) : '已簽到'})`
+        ? `報到狀態：已完成 (入場時間：${parsedD ? parsedD.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' }) : '已簽到'})`
         : `報到時間：${new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`;
+    }
+
+    function parseUtcDate(val) {
+      if (!val) return null;
+      if (val instanceof Date) return val;
+      let s = String(val).trim();
+      if (s.includes('T') && !s.endsWith('Z') && !/[+-]\d{2}:?\d{2}$/.test(s)) {
+        s += 'Z';
+      }
+      const d = new Date(s);
+      return isNaN(d.getTime()) ? null : d;
     }
 
     function maskName(name) {

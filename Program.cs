@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
+using ShowChwanCheckIn.Common;
 using ShowChwanCheckIn.Data;
 using ShowChwanCheckIn.Hubs;
 using ShowChwanCheckIn.Models;
@@ -1057,7 +1058,7 @@ async Task<IResult> HandleCreateEvent(CreateEventRequest? req, HttpContext ctx, 
 
     var newEvent = new Event
     {
-        EventId = string.IsNullOrWhiteSpace(req.EventId) ? $"event_{DateTime.Now:yyyyMMdd_HHmmss}_{Guid.NewGuid().ToString("N")[..6]}" : req.EventId,
+        EventId = string.IsNullOrWhiteSpace(req.EventId) ? $"event_{TaiwanTime.Now:yyyyMMdd_HHmmss}_{Guid.NewGuid().ToString("N")[..6]}" : req.EventId,
         EventName = req.EventName.Trim(),
         EventDate = req.EventDate != default ? req.EventDate : DateTime.UtcNow,
         Location = string.IsNullOrWhiteSpace(req.Location) ? "大會國際會議廳" : req.Location.Trim(),
@@ -1349,7 +1350,7 @@ Func<string, string, CheckInToggleRequest, HttpContext, IEventService, IHubConte
             EventId = id,
             Guest = updated,
             UpdatedBy = staff,
-            Timestamp = DateTime.Now,
+            Timestamp = TaiwanTime.Now,
             Stats = stats
         });
         await hubContext.Clients.All.SendAsync("OnStatsUpdated", stats);
@@ -1373,7 +1374,7 @@ app.MapPost("/api/events/toggle-checkin", async (ToggleCheckInDirectRequest req,
             EventId = req.EventId,
             Guest = updated,
             UpdatedBy = staff,
-            Timestamp = DateTime.Now,
+            Timestamp = TaiwanTime.Now,
             Stats = stats
         });
         await hubContext.Clients.All.SendAsync("OnStatsUpdated", stats);
@@ -1523,7 +1524,7 @@ app.MapPost("/api/events/{id}/guests/{gId}/rank", async (string id, string gId, 
         EventId = id,
         Guest = g,
         UpdatedBy = "名冊管理人員",
-        Timestamp = DateTime.Now,
+        Timestamp = TaiwanTime.Now,
         Stats = stats
     });
     await hubContext.Clients.All.SendAsync("OnStatsUpdated", stats);
@@ -1554,7 +1555,7 @@ app.MapPut("/api/events/{id}/guests/{gId}/rank", async (string id, string gId, U
         EventId = id,
         Guest = g,
         UpdatedBy = "名冊管理人員",
-        Timestamp = DateTime.Now,
+        Timestamp = TaiwanTime.Now,
         Stats = stats
     });
     await hubContext.Clients.All.SendAsync("OnStatsUpdated", stats);
@@ -1575,7 +1576,7 @@ app.MapGet("/api/events/{id}/export", async (string id, HttpContext ctx, IEventS
 
     var csvData = await service.ExportCsvAsync(id);
     var safeEventName = string.IsNullOrWhiteSpace(ev.EventName) ? "InPoint" : ev.EventName.Replace(" ", "_");
-    var safeFileName = $"活動報到名冊_{safeEventName}_{DateTime.Now:yyyyMMdd_HHmm}.csv";
+    var safeFileName = $"活動報到名冊_{safeEventName}_{TaiwanTime.Now:yyyyMMdd_HHmm}.csv";
 
     var preamble = System.Text.Encoding.UTF8.GetPreamble();
     var bytes = System.Text.Encoding.UTF8.GetBytes(csvData);
@@ -1752,7 +1753,7 @@ app.MapPost("/api/events/{id}/self-checkin", async (string id, SelfCheckInReques
         EventId = id,
         Guest = updated,
         UpdatedBy = "手機掃碼自主報到",
-        Timestamp = DateTime.Now,
+        Timestamp = TaiwanTime.Now,
         Stats = stats
     });
     await hubContext.Clients.All.SendAsync("OnStatsUpdated", stats);

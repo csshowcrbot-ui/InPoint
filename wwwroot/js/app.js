@@ -1705,8 +1705,8 @@ class CheckInApp {
             if (checked) {
                 let timeStr = '';
                 if (checkedAt) {
-                    const d = new Date(checkedAt);
-                    if (!isNaN(d.getTime())) {
+                    const d = this.parseDate(checkedAt);
+                    if (d && !isNaN(d.getTime())) {
                         timeStr = d.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' });
                     }
                 }
@@ -1908,8 +1908,8 @@ class CheckInApp {
             if (getGuestRank(a) !== getGuestRank(b)) {
                 return getGuestRank(a) - getGuestRank(b);
             }
-            const aTime = a.checkedInAt ? new Date(a.checkedInAt).getTime() : 0;
-            const bTime = b.checkedInAt ? new Date(b.checkedInAt).getTime() : 0;
+            const aTime = a.checkedInAt ? (this.parseDate(a.checkedInAt)?.getTime() || 0) : 0;
+            const bTime = b.checkedInAt ? (this.parseDate(b.checkedInAt)?.getTime() || 0) : 0;
             return bTime - aTime;
         });
 
@@ -1960,8 +1960,10 @@ class CheckInApp {
                     
                     let timeFormatted = '已完成簽到';
                     if (g.checkedInAt) {
-                        const d = new Date(g.checkedInAt);
-                        timeFormatted = `下午 ${d.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`;
+                        const d = this.parseDate(g.checkedInAt);
+                        if (d && !isNaN(d.getTime())) {
+                            timeFormatted = d.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                        }
                     }
 
                     let speechCue = `🎙️ 提詞建議：長官已到場就座，可請貴賓準備致詞或引言。`;
@@ -2940,6 +2942,18 @@ class CheckInApp {
             .replace(/>/g, '&gt;')
             .replace(/"/g, '&quot;')
             .replace(/'/g, '&#039;');
+    }
+
+    parseDate(val) {
+        if (!val) return null;
+        if (val instanceof Date) return val;
+        let s = String(val).trim();
+        // 若為 ISO 格式但末尾無 Z 且無時區標記，因後端資料庫存為 UTC，自動補上 Z 保證依用戶本地時區解析
+        if (s.includes('T') && !s.endsWith('Z') && !/[+-]\d{2}:?\d{2}$/.test(s)) {
+            s += 'Z';
+        }
+        const d = new Date(s);
+        return isNaN(d.getTime()) ? null : d;
     }
 }
 
