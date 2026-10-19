@@ -111,154 +111,9 @@ if (useSql)
                 Console.WriteLine($"[PostgreSQL DB] Alter column migration note: {pgEx.Message}");
             }
 
-            if (!db.Users.Any(u => u.Username == "admin"))
-            {
-                db.Users.Add(new User
-                {
-                    UserId = "user_admin",
-                    Username = "admin",
-                    PasswordHash = InMemoryEventService.HashPassword("ZiEiHrpPq@"),
-                    Role = "Admin",
-                    DisplayName = "系統最高管理員",
-                    Organization = "InPoint 核心管理中心",
-                    PlanType = "Unlimited",
-                    MaxGuestsPerEvent = 99999,
-                    MaxEvents = -1,
-                    IsActive = true,
-                    CreatedAt = DateTime.UtcNow,
-                    Notes = "預設系統管理員"
-                });
-            }
-
-            if (!db.Users.Any(u => u.Username == "single_demo"))
-            {
-                db.Users.Add(new User
-                {
-                    UserId = "user_single_demo",
-                    Username = "single_demo",
-                    PasswordHash = InMemoryEventService.HashPassword("123456"),
-                    Role = "Member",
-                    DisplayName = "陳專員 (單場活動試用)",
-                    Organization = "前瞻生醫研發中心",
-                    PlanType = "SingleEvent",
-                    ExpireAt = DateTime.UtcNow.AddDays(7),
-                    MaxGuestsPerEvent = 500,
-                    MaxEvents = 1,
-                    IsActive = true,
-                    CreatedAt = DateTime.UtcNow,
-                    Notes = "單場活動 7 天授權體驗帳號"
-                });
-            }
-
-            if (!db.Users.Any(u => u.Username == "annual_demo"))
-            {
-                db.Users.Add(new User
-                {
-                    UserId = "user_annual_demo",
-                    Username = "annual_demo",
-                    PasswordHash = InMemoryEventService.HashPassword("123456"),
-                    Role = "Member",
-                    DisplayName = "林主任 (機構年度專案)",
-                    Organization = "秀傳醫療體系 - 營運管理部",
-                    PlanType = "AnnualOrg",
-                    ExpireAt = DateTime.UtcNow.AddYears(1),
-                    MaxGuestsPerEvent = 1500,
-                    MaxEvents = -1,
-                    IsActive = true,
-                    CreatedAt = DateTime.UtcNow,
-                    Notes = "機構年度方案完整功能帳號"
-                });
-            }
-
-            db.SaveChanges();
-
-            if (!db.Events.Any())
-            {
-                // 自動熱遷移：自舊 Zeabur 資料庫無痛同步所有真實活動、使用者與貴賓名冊
-                const string LEGACY_ZEABUR_URL = "postgresql://root:WFrQ2E753JL9ec6USijDO01kNM4n8bfg@54.150.14.236:32694/zeabur";
-                bool migrationSuccess = false;
-                try
-                {
-                    Console.WriteLine("[Database Migration] 檢測到全新 Railway 資料庫，正在自舊 Zeabur 資料庫熱遷移所有資料...");
-                    var legacyConnStr = ConvertPostgresUrlToConnectionString(LEGACY_ZEABUR_URL);
-                    var legacyBuilder = new DbContextOptionsBuilder<AppDbContext>().UseNpgsql(legacyConnStr);
-                    using var legacyDb = new AppDbContext(legacyBuilder.Options);
-
-                    var oldUsers = legacyDb.Users.AsNoTracking().ToList();
-                    if (oldUsers.Any())
-                    {
-                        foreach (var u in oldUsers)
-                        {
-                            if (!db.Users.Any(x => x.UserId == u.UserId)) db.Users.Add(u);
-                        }
-                        db.SaveChanges();
-                    }
-
-                    var oldEvents = legacyDb.Events.AsNoTracking().ToList();
-                    if (oldEvents.Any())
-                    {
-                        foreach (var ev in oldEvents)
-                        {
-                            if (!db.Events.Any(x => x.EventId == ev.EventId)) db.Events.Add(ev);
-                        }
-                        db.SaveChanges();
-                    }
-
-                    var oldGuests = legacyDb.Guests.AsNoTracking().ToList();
-                    if (oldGuests.Any())
-                    {
-                        foreach (var g in oldGuests)
-                        {
-                            if (!db.Guests.Any(x => x.EventId == g.EventId && x.GuestId == g.GuestId)) db.Guests.Add(g);
-                        }
-                        db.SaveChanges();
-                    }
-
-                    if (oldEvents.Any())
-                    {
-                        migrationSuccess = true;
-                        Console.WriteLine($"[Database Migration] 遷移成功！共已同步：{oldEvents.Count} 場活動、{oldUsers.Count} 位使用者帳號、{oldGuests.Count} 筆貴賓名單至 Railway。");
-                    }
-                }
-                catch (Exception migEx)
-                {
-                    Console.WriteLine($"[Database Migration Notice] 自舊庫同步提示 (將採用備援初始化): {migEx.Message}");
-                }
-
-                if (!migrationSuccess && !db.Events.Any())
-                {
-                    var targetEventId = "event_20260917_084526";
-                    db.Events.Add(new Event
-                    {
-                        EventId = targetEventId,
-                        EventName = "月烤月嗨",
-                        EventDate = new DateTime(2026, 9, 17, 9, 0, 0, DateTimeKind.Utc),
-                        Location = "後山停車場",
-                        Description = "2026 秀傳中秋同樂烤肉聯歡大會",
-                        IsActive = true,
-                        CreatedAt = DateTime.UtcNow,
-                        OwnerUsername = "single_demo"
-                    });
-                    db.SaveChanges();
-
-                    if (!db.Guests.Any(g => g.EventId == targetEventId))
-                    {
-                        db.Guests.AddRange(new[]
-                        {
-                            new Guest { EventId = targetEventId, GuestId = "00601441", Name = "黃院長", Organization = "秀傳紀念醫院", Title = "院長", RankWeight = 1, TableNo = "VIP-1 主桌", IsCheckedIn = true, CheckedInAt = DateTime.UtcNow.AddMinutes(-35), CheckedInBy = "櫃檯報到處", QrCodeHash = "SC-2026-00601441", Phone = "0922-111-222", Notes = "大會主席" },
-                            new Guest { EventId = targetEventId, GuestId = "00601442", Name = "張副院長", Organization = "彰濱秀傳紀念醫院", Title = "副院長", RankWeight = 2, TableNo = "VIP-2 貴賓席", IsCheckedIn = true, CheckedInAt = DateTime.UtcNow.AddMinutes(-25), CheckedInBy = "櫃檯報到處", QrCodeHash = "SC-2026-00601442", Phone = "0988-999-000", Notes = "座談引言人" },
-                            new Guest { EventId = targetEventId, GuestId = "00601443", Name = "李議員", Organization = "彰化縣議會", Title = "議員", RankWeight = 2, TableNo = "VIP-2 貴賓席", IsCheckedIn = true, CheckedInAt = DateTime.UtcNow.AddMinutes(-20), CheckedInBy = "櫃檯報到處", QrCodeHash = "SC-2026-00601443", Phone = "0933-555-777", Notes = "特邀指導貴賓" },
-                            new Guest { EventId = targetEventId, GuestId = "00601444", Name = "陳主任", Organization = "心血管醫學部", Title = "主任", RankWeight = 3, TableNo = "第 3 組 (12桌)", IsCheckedIn = true, CheckedInAt = DateTime.UtcNow.AddMinutes(-15), CheckedInBy = "櫃檯報到處", QrCodeHash = "SC-2026-00601444", Phone = "0955-667-788", Notes = "專題座談代表" },
-                            new Guest { EventId = targetEventId, GuestId = "00601445", Name = "林組長", Organization = "資訊科技處", Title = "組長", RankWeight = 3, TableNo = "第 3 組 (12桌)", IsCheckedIn = false, CheckedInAt = null, CheckedInBy = null, QrCodeHash = "SC-2026-00601445", Phone = "0966-778-899", Notes = "系統維運代表" },
-                            new Guest { EventId = targetEventId, GuestId = "00601446", Name = "趙管理師", Organization = "品質管理中心", Title = "資深管理師", RankWeight = 4, TableNo = "第 5 組 (15桌)", IsCheckedIn = true, CheckedInAt = DateTime.UtcNow.AddMinutes(-10), CheckedInBy = "櫃檯報到處", QrCodeHash = "SC-2026-00601446", Phone = "0977-889-900", Notes = "同仁代表" },
-                            new Guest { EventId = targetEventId, GuestId = "00601447", Name = "孫專員", Organization = "醫療企劃部", Title = "專員", RankWeight = 4, TableNo = "第 5 組 (15桌)", IsCheckedIn = true, CheckedInAt = DateTime.UtcNow.AddMinutes(-8), CheckedInBy = "櫃檯報到處", QrCodeHash = "SC-2026-00601447", Phone = "0912-333-444", Notes = "企劃同仁" },
-                            new Guest { EventId = targetEventId, GuestId = "00601448", Name = "郭工程師", Organization = "醫工部", Title = "工程師", RankWeight = 4, TableNo = "第 6 組 (18桌)", IsCheckedIn = false, CheckedInAt = null, CheckedInBy = null, QrCodeHash = "SC-2026-00601448", Phone = "0922-444-555", Notes = "醫工同仁" }
-                        });
-                        db.SaveChanges();
-                    }
-                }
-            }
-            Console.WriteLine("[PostgreSQL DB] Tables and Seed data initialized successfully.");
+            // 執行資料庫自動檢查與從 Zeabur 智慧熱遷移 (支援線上即時同步與快照備援)
+            await DatabaseMigrationHelper.AutoMigrateOnStartupAsync(db, activeConnStr, isPostgres);
+            Console.WriteLine("[PostgreSQL DB] Tables and Data checked/migrated successfully.");
         }
         else
         {
@@ -805,7 +660,55 @@ app.MapPost("/api/auth/logout", (HttpContext ctx) =>
     return Results.Ok(new { success = true, message = "已安全登出" });
 });
 
-// --- 2. Member Management APIs (Admin Only) ---
+// --- 2. Database Migration APIs (Admin Only) ---
+
+app.MapPost("/api/admin/migrate-from-zeabur", async (HttpContext ctx, IDbContextFactory<AppDbContext> factory, IConfiguration config) =>
+{
+    if (!CheckAdminAuth(ctx))
+    {
+        return Results.Unauthorized();
+    }
+
+    try
+    {
+        using var db = factory.CreateDbContext();
+        var rawConnStr = config.GetConnectionString("DefaultConnection");
+        var activeConn = ResolveWorkingConnectionString(rawConnStr);
+        var result = await DatabaseMigrationHelper.ExecuteMigrationAsync(db, activeConn, force: true);
+        return Results.Ok(result);
+    }
+    catch (Exception ex)
+    {
+        return Results.Problem($"執行資料庫遷移發生錯誤: {ex.Message}");
+    }
+});
+
+app.MapGet("/api/admin/migration-status", async (HttpContext ctx, IDbContextFactory<AppDbContext> factory) =>
+{
+    if (!CheckAdminAuth(ctx))
+    {
+        return Results.Unauthorized();
+    }
+
+    using var db = factory.CreateDbContext();
+    var hasRealEvent = await db.Events.AnyAsync(e => e.EventId == "event_20261015_061409_6b980b");
+    var hasDummyEvent = await db.Events.AnyAsync(e => e.EventId == "event_20260917_084526");
+    var eventsCount = await db.Events.CountAsync();
+    var usersCount = await db.Users.CountAsync();
+    var guestsCount = await db.Guests.CountAsync();
+
+    return Results.Ok(new
+    {
+        hasRealZeaburData = hasRealEvent,
+        hasDummyEvent = hasDummyEvent,
+        totalEvents = eventsCount,
+        totalUsers = usersCount,
+        totalGuests = guestsCount,
+        message = hasRealEvent ? "已成功載入 Zeabur 正式歷史資料" : "尚未完成 Zeabur 正式歷史資料遷移"
+    });
+});
+
+// --- 3. Member Management APIs (Admin Only) ---
 
 app.MapGet("/api/members", async (HttpContext ctx, IEventService service) =>
 {

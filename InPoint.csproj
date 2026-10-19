@@ -21,5 +21,8 @@
     <Content Remove="scratch\**" />
     <EmbeddedResource Remove="scratch\**" />
     <None Remove="scratch\**" />
+    <None Include="migration_zeabur_to_railway.sql">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 </Project>
