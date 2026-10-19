@@ -103,7 +103,25 @@ if (useSql)
                             ALTER TABLE checkinevents ADD COLUMN ownerusername VARCHAR(100) NULL;
                         END IF;
                     END IF;
+
+                    -- 檢查並為 checkInGuests 新增 CreatedAt 欄位
+                    IF EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'checkInGuests') THEN
+                        IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name = 'checkInGuests' AND column_name = 'CreatedAt') THEN
+                            ALTER TABLE ""checkInGuests"" ADD COLUMN ""CreatedAt"" TIMESTAMP NOT NULL DEFAULT NOW();
+                        END IF;
+                    END IF;
+                    IF EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'checkinguests') THEN
+                        IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name = 'checkinguests' AND column_name = 'createdat') THEN
+                            ALTER TABLE checkinguests ADD COLUMN createdat TIMESTAMP NOT NULL DEFAULT NOW();
+                        END IF;
+                        IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name = 'checkinguests' AND column_name = 'CreatedAt') THEN
+                            ALTER TABLE checkinguests ADD COLUMN ""CreatedAt"" TIMESTAMP NOT NULL DEFAULT NOW();
+                        END IF;
+                    END IF;
                 END $$;
+
+                -- 額外確保 checkInGuests 具備 CreatedAt 欄位 (原生語法雙重防護)
+                ALTER TABLE IF EXISTS ""checkInGuests"" ADD COLUMN IF NOT EXISTS ""CreatedAt"" TIMESTAMP NOT NULL DEFAULT NOW();
                 ";
                 using var alterCmd = new NpgsqlCommand(alterPgSql, pgConn);
                 alterCmd.ExecuteNonQuery();

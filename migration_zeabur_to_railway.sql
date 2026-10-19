@@ -1,4 +1,4 @@
-﻿-- =============================================================================
+-- =============================================================================
 -- InPoint: Zeabur PostgreSQL 遷移至 Railway PostgreSQL 資料匯入腳本
 -- 導出時間 (UTC): 2026-10-19T22:03:47.6073421Z
 -- 特點: 自動建表 (CREATE TABLE IF NOT EXISTS) 與冪等插入 (ON CONFLICT DO UPDATE)
@@ -52,8 +52,10 @@ CREATE TABLE IF NOT EXISTS "checkInGuests" (
     "QrCodeHash" VARCHAR(100) NULL,
     "Phone" VARCHAR(50) NULL,
     "Notes" VARCHAR(1000) NULL,
+    "CreatedAt" TIMESTAMP NOT NULL DEFAULT NOW(),
     PRIMARY KEY ("EventId", "GuestId")
 );
+ALTER TABLE IF EXISTS "checkInGuests" ADD COLUMN IF NOT EXISTS "CreatedAt" TIMESTAMP NOT NULL DEFAULT NOW();
 CREATE INDEX IF NOT EXISTS "IX_checkInGuests_EventId" ON "checkInGuests" ("EventId");
 CREATE INDEX IF NOT EXISTS "IX_checkInGuests_QrCodeHash" ON "checkInGuests" ("QrCodeHash");
 
