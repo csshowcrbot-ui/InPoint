@@ -2696,7 +2696,12 @@ class CheckInApp {
         await this.handleAddNewGuest(isCheckedIn);
     }
 
-    async handleAddNewGuest(isCheckedIn = false) {
+    async handleAddNewGuest(isCheckedIn = null) {
+        if (isCheckedIn === null || typeof isCheckedIn !== 'boolean') {
+            const checkedChoice = document.querySelector('input[name="addGuestCheckInChoice"]:checked');
+            isCheckedIn = checkedChoice ? checkedChoice.value === 'true' : false;
+        }
+
         const name = document.getElementById('addGuestName')?.value.trim();
         const org = document.getElementById('addGuestOrg')?.value.trim();
         const title = document.getElementById('addGuestTitle')?.value.trim();
@@ -2707,12 +2712,18 @@ class CheckInApp {
 
         if (!name) {
             alert('請輸入貴賓姓名！');
+            document.getElementById('addGuestName')?.focus();
             return;
         }
 
         const rankWeight = this.calculateRankWeight(title);
         const user = window.apiService.currentUser;
         const staff = user ? `${user.displayName || user.username} (工作台)` : '現場報到處';
+
+        const btnAdd = document.getElementById('btnAddGuestOnlyBtn');
+        const btnCheckIn = document.getElementById('btnAddGuestAndCheckInBtn');
+        if (btnAdd) btnAdd.disabled = true;
+        if (btnCheckIn) btnCheckIn.disabled = true;
 
         try {
             await window.apiService.addGuest(this.currentEventId, {
@@ -2745,6 +2756,9 @@ class CheckInApp {
             await this.loadGuestsAndStats();
         } catch (err) {
             alert(err.message || '新增貴賓失敗');
+        } finally {
+            if (btnAdd) btnAdd.disabled = false;
+            if (btnCheckIn) btnCheckIn.disabled = false;
         }
     }
 

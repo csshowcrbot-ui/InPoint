@@ -80,6 +80,12 @@ class ApiService {
             headers['Authorization'] = `Bearer ${this.token}`;
             headers['X-Auth-Token'] = this.token;
         }
+        if (this.currentUser && this.currentUser.username) {
+            headers['X-Username'] = this.currentUser.username;
+        }
+        if (this.currentUser && this.currentUser.userId) {
+            headers['X-User-Id'] = this.currentUser.userId;
+        }
         return headers;
     }
 
@@ -423,7 +429,10 @@ class ApiService {
         });
         const data = await res.json().catch(() => ({}));
         if (!res.ok) {
-            throw new Error(data.message || '新增貴賓失敗');
+            if (res.status === 401) {
+                throw new Error('⚠️ 登入授權已逾期或伺服器重新啟動，請重新登入！');
+            }
+            throw new Error(data.message || data.error || `新增貴賓失敗 (HTTP ${res.status})`);
         }
         this.broadcast('guestAdded', { eventId, guest: data });
         if (data.isCheckedIn) {
