@@ -174,34 +174,88 @@ if (useSql)
 
             if (!db.Events.Any())
             {
-                var targetEventId = "event_20260917_084526";
-                db.Events.Add(new Event
+                // 自動熱遷移：自舊 Zeabur 資料庫無痛同步所有真實活動、使用者與貴賓名冊
+                const string LEGACY_ZEABUR_URL = "postgresql://root:WFrQ2E753JL9ec6USijDO01kNM4n8bfg@54.150.14.236:32694/zeabur";
+                bool migrationSuccess = false;
+                try
                 {
-                    EventId = targetEventId,
-                    EventName = "月烤月嗨",
-                    EventDate = new DateTime(2026, 9, 17, 9, 0, 0, DateTimeKind.Utc),
-                    Location = "後山停車場",
-                    Description = "2026 秀傳中秋同樂烤肉聯歡大會",
-                    IsActive = true,
-                    CreatedAt = DateTime.UtcNow,
-                    OwnerUsername = "single_demo"
-                });
-                db.SaveChanges();
+                    Console.WriteLine("[Database Migration] 檢測到全新 Railway 資料庫，正在自舊 Zeabur 資料庫熱遷移所有資料...");
+                    var legacyConnStr = ConvertPostgresUrlToConnectionString(LEGACY_ZEABUR_URL);
+                    var legacyBuilder = new DbContextOptionsBuilder<AppDbContext>().UseNpgsql(legacyConnStr);
+                    using var legacyDb = new AppDbContext(legacyBuilder.Options);
 
-                if (!db.Guests.Any(g => g.EventId == targetEventId))
-                {
-                    db.Guests.AddRange(new[]
+                    var oldUsers = legacyDb.Users.AsNoTracking().ToList();
+                    if (oldUsers.Any())
                     {
-                        new Guest { EventId = targetEventId, GuestId = "00601441", Name = "黃院長", Organization = "秀傳紀念醫院", Title = "院長", RankWeight = 1, TableNo = "VIP-1 主桌", IsCheckedIn = true, CheckedInAt = DateTime.UtcNow.AddMinutes(-35), CheckedInBy = "櫃檯報到處", QrCodeHash = "SC-2026-00601441", Phone = "0922-111-222", Notes = "大會主席" },
-                        new Guest { EventId = targetEventId, GuestId = "00601442", Name = "張副院長", Organization = "彰濱秀傳紀念醫院", Title = "副院長", RankWeight = 2, TableNo = "VIP-2 貴賓席", IsCheckedIn = true, CheckedInAt = DateTime.UtcNow.AddMinutes(-25), CheckedInBy = "櫃檯報到處", QrCodeHash = "SC-2026-00601442", Phone = "0988-999-000", Notes = "座談引言人" },
-                        new Guest { EventId = targetEventId, GuestId = "00601443", Name = "李議員", Organization = "彰化縣議會", Title = "議員", RankWeight = 2, TableNo = "VIP-2 貴賓席", IsCheckedIn = true, CheckedInAt = DateTime.UtcNow.AddMinutes(-20), CheckedInBy = "櫃檯報到處", QrCodeHash = "SC-2026-00601443", Phone = "0933-555-777", Notes = "特邀指導貴賓" },
-                        new Guest { EventId = targetEventId, GuestId = "00601444", Name = "陳主任", Organization = "心血管醫學部", Title = "主任", RankWeight = 3, TableNo = "第 3 組 (12桌)", IsCheckedIn = true, CheckedInAt = DateTime.UtcNow.AddMinutes(-15), CheckedInBy = "櫃檯報到處", QrCodeHash = "SC-2026-00601444", Phone = "0955-667-788", Notes = "專題座談代表" },
-                        new Guest { EventId = targetEventId, GuestId = "00601445", Name = "林組長", Organization = "資訊科技處", Title = "組長", RankWeight = 3, TableNo = "第 3 組 (12桌)", IsCheckedIn = false, CheckedInAt = null, CheckedInBy = null, QrCodeHash = "SC-2026-00601445", Phone = "0966-778-899", Notes = "系統維運代表" },
-                        new Guest { EventId = targetEventId, GuestId = "00601446", Name = "趙管理師", Organization = "品質管理中心", Title = "資深管理師", RankWeight = 4, TableNo = "第 5 組 (15桌)", IsCheckedIn = true, CheckedInAt = DateTime.UtcNow.AddMinutes(-10), CheckedInBy = "櫃檯報到處", QrCodeHash = "SC-2026-00601446", Phone = "0977-889-900", Notes = "同仁代表" },
-                        new Guest { EventId = targetEventId, GuestId = "00601447", Name = "孫專員", Organization = "醫療企劃部", Title = "專員", RankWeight = 4, TableNo = "第 5 組 (15桌)", IsCheckedIn = true, CheckedInAt = DateTime.UtcNow.AddMinutes(-8), CheckedInBy = "櫃檯報到處", QrCodeHash = "SC-2026-00601447", Phone = "0912-333-444", Notes = "企劃同仁" },
-                        new Guest { EventId = targetEventId, GuestId = "00601448", Name = "郭工程師", Organization = "醫工部", Title = "工程師", RankWeight = 4, TableNo = "第 6 組 (18桌)", IsCheckedIn = false, CheckedInAt = null, CheckedInBy = null, QrCodeHash = "SC-2026-00601448", Phone = "0922-444-555", Notes = "醫工同仁" }
+                        foreach (var u in oldUsers)
+                        {
+                            if (!db.Users.Any(x => x.UserId == u.UserId)) db.Users.Add(u);
+                        }
+                        db.SaveChanges();
+                    }
+
+                    var oldEvents = legacyDb.Events.AsNoTracking().ToList();
+                    if (oldEvents.Any())
+                    {
+                        foreach (var ev in oldEvents)
+                        {
+                            if (!db.Events.Any(x => x.EventId == ev.EventId)) db.Events.Add(ev);
+                        }
+                        db.SaveChanges();
+                    }
+
+                    var oldGuests = legacyDb.Guests.AsNoTracking().ToList();
+                    if (oldGuests.Any())
+                    {
+                        foreach (var g in oldGuests)
+                        {
+                            if (!db.Guests.Any(x => x.EventId == g.EventId && x.GuestId == g.GuestId)) db.Guests.Add(g);
+                        }
+                        db.SaveChanges();
+                    }
+
+                    if (oldEvents.Any())
+                    {
+                        migrationSuccess = true;
+                        Console.WriteLine($"[Database Migration] 遷移成功！共已同步：{oldEvents.Count} 場活動、{oldUsers.Count} 位使用者帳號、{oldGuests.Count} 筆貴賓名單至 Railway。");
+                    }
+                }
+                catch (Exception migEx)
+                {
+                    Console.WriteLine($"[Database Migration Notice] 自舊庫同步提示 (將採用備援初始化): {migEx.Message}");
+                }
+
+                if (!migrationSuccess && !db.Events.Any())
+                {
+                    var targetEventId = "event_20260917_084526";
+                    db.Events.Add(new Event
+                    {
+                        EventId = targetEventId,
+                        EventName = "月烤月嗨",
+                        EventDate = new DateTime(2026, 9, 17, 9, 0, 0, DateTimeKind.Utc),
+                        Location = "後山停車場",
+                        Description = "2026 秀傳中秋同樂烤肉聯歡大會",
+                        IsActive = true,
+                        CreatedAt = DateTime.UtcNow,
+                        OwnerUsername = "single_demo"
                     });
                     db.SaveChanges();
+
+                    if (!db.Guests.Any(g => g.EventId == targetEventId))
+                    {
+                        db.Guests.AddRange(new[]
+                        {
+                            new Guest { EventId = targetEventId, GuestId = "00601441", Name = "黃院長", Organization = "秀傳紀念醫院", Title = "院長", RankWeight = 1, TableNo = "VIP-1 主桌", IsCheckedIn = true, CheckedInAt = DateTime.UtcNow.AddMinutes(-35), CheckedInBy = "櫃檯報到處", QrCodeHash = "SC-2026-00601441", Phone = "0922-111-222", Notes = "大會主席" },
+                            new Guest { EventId = targetEventId, GuestId = "00601442", Name = "張副院長", Organization = "彰濱秀傳紀念醫院", Title = "副院長", RankWeight = 2, TableNo = "VIP-2 貴賓席", IsCheckedIn = true, CheckedInAt = DateTime.UtcNow.AddMinutes(-25), CheckedInBy = "櫃檯報到處", QrCodeHash = "SC-2026-00601442", Phone = "0988-999-000", Notes = "座談引言人" },
+                            new Guest { EventId = targetEventId, GuestId = "00601443", Name = "李議員", Organization = "彰化縣議會", Title = "議員", RankWeight = 2, TableNo = "VIP-2 貴賓席", IsCheckedIn = true, CheckedInAt = DateTime.UtcNow.AddMinutes(-20), CheckedInBy = "櫃檯報到處", QrCodeHash = "SC-2026-00601443", Phone = "0933-555-777", Notes = "特邀指導貴賓" },
+                            new Guest { EventId = targetEventId, GuestId = "00601444", Name = "陳主任", Organization = "心血管醫學部", Title = "主任", RankWeight = 3, TableNo = "第 3 組 (12桌)", IsCheckedIn = true, CheckedInAt = DateTime.UtcNow.AddMinutes(-15), CheckedInBy = "櫃檯報到處", QrCodeHash = "SC-2026-00601444", Phone = "0955-667-788", Notes = "專題座談代表" },
+                            new Guest { EventId = targetEventId, GuestId = "00601445", Name = "林組長", Organization = "資訊科技處", Title = "組長", RankWeight = 3, TableNo = "第 3 組 (12桌)", IsCheckedIn = false, CheckedInAt = null, CheckedInBy = null, QrCodeHash = "SC-2026-00601445", Phone = "0966-778-899", Notes = "系統維運代表" },
+                            new Guest { EventId = targetEventId, GuestId = "00601446", Name = "趙管理師", Organization = "品質管理中心", Title = "資深管理師", RankWeight = 4, TableNo = "第 5 組 (15桌)", IsCheckedIn = true, CheckedInAt = DateTime.UtcNow.AddMinutes(-10), CheckedInBy = "櫃檯報到處", QrCodeHash = "SC-2026-00601446", Phone = "0977-889-900", Notes = "同仁代表" },
+                            new Guest { EventId = targetEventId, GuestId = "00601447", Name = "孫專員", Organization = "醫療企劃部", Title = "專員", RankWeight = 4, TableNo = "第 5 組 (15桌)", IsCheckedIn = true, CheckedInAt = DateTime.UtcNow.AddMinutes(-8), CheckedInBy = "櫃檯報到處", QrCodeHash = "SC-2026-00601447", Phone = "0912-333-444", Notes = "企劃同仁" },
+                            new Guest { EventId = targetEventId, GuestId = "00601448", Name = "郭工程師", Organization = "醫工部", Title = "工程師", RankWeight = 4, TableNo = "第 6 組 (18桌)", IsCheckedIn = false, CheckedInAt = null, CheckedInBy = null, QrCodeHash = "SC-2026-00601448", Phone = "0922-444-555", Notes = "醫工同仁" }
+                        });
+                        db.SaveChanges();
+                    }
                 }
             }
             Console.WriteLine("[PostgreSQL DB] Tables and Seed data initialized successfully.");
@@ -351,7 +405,22 @@ static string ResolveWorkingConnectionString(string? rawConnStr)
         return string.Empty;
 
     if (rawConnStr.StartsWith("postgres://") || rawConnStr.StartsWith("postgresql://") || rawConnStr.Contains("Host="))
+    {
+        if (rawConnStr.Contains(".railway.internal"))
+        {
+            try
+            {
+                var uri = new Uri(rawConnStr.Replace("postgresql://", "http://").Replace("postgres://", "http://"));
+                System.Net.Dns.GetHostEntry(uri.Host);
+            }
+            catch
+            {
+                Console.WriteLine("[Database] 檢測到 Railway 內部網域名稱於本機無法解析，本機開發端自動切換至備援連線。");
+                return "postgresql://root:WFrQ2E753JL9ec6USijDO01kNM4n8bfg@54.150.14.236:32694/zeabur";
+            }
+        }
         return rawConnStr;
+    }
 
     var serverCandidates = new List<string>();
     var match = System.Text.RegularExpressions.Regex.Match(rawConnStr, @"Server=([^;]+)", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
