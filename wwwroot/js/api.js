@@ -426,6 +426,9 @@ class ApiService {
             throw new Error(data.message || '新增貴賓失敗');
         }
         this.broadcast('guestAdded', { eventId, guest: data });
+        if (data.isCheckedIn) {
+            this.broadcast('checkInChanged', { eventId, guest: data, staffName: data.checkedInBy || '現場新增報到' });
+        }
         return data;
     }
 

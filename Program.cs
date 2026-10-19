@@ -1256,6 +1256,18 @@ app.MapPost("/api/events/{id}/guests", async (string id, Guest guest, HttpContex
     guest.EventId = id;
     var added = await service.AddGuestAsync(guest);
     await hubContext.Clients.Group(id).SendAsync("OnGuestAdded", added);
+    if (added.IsCheckedIn)
+    {
+        var stats = await service.GetEventStatsAsync(id);
+        await hubContext.Clients.Group(id).SendAsync("OnGuestCheckInChanged", new
+        {
+            EventId = id,
+            Guest = added,
+            UpdatedBy = added.CheckedInBy ?? "現場新增報到",
+            Timestamp = TaiwanTime.Now,
+            Stats = stats
+        });
+    }
     await hubContext.Clients.All.SendAsync("OnStatsUpdated", await service.GetEventStatsAsync(id));
     return Results.Created($"/api/events/{id}/guests/{added.GuestId}", added);
 });

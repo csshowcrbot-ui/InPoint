@@ -217,6 +217,14 @@ public class SqlEventService : IEventService
             guest.QrCodeHash = $"SC-{guest.EventId.Replace("event_", "")}-{guest.GuestId}";
         }
         guest.CreatedAt = DateTime.UtcNow;
+        if (guest.IsCheckedIn)
+        {
+            guest.CheckedInAt ??= DateTime.UtcNow;
+            if (string.IsNullOrWhiteSpace(guest.CheckedInBy))
+            {
+                guest.CheckedInBy = "現場新增報到";
+            }
+        }
         db.Guests.Add(guest);
         await db.SaveChangesAsync();
         return guest;

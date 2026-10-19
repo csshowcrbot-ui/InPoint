@@ -223,7 +223,7 @@ class CheckInApp {
         if (addGuestForm) {
             addGuestForm.addEventListener('submit', async (e) => {
                 e.preventDefault();
-                await this.handleAddNewGuest();
+                await this.submitNewGuest();
             });
         }
 
@@ -2662,6 +2662,11 @@ class CheckInApp {
     showAddGuestModal() {
         const modal = document.getElementById('addGuestModal');
         if (modal) modal.classList.add('active');
+        const defaultChoice = document.getElementById('choiceCheckInFalse');
+        if (defaultChoice) defaultChoice.checked = true;
+        setTimeout(() => {
+            document.getElementById('addGuestName')?.focus();
+        }, 100);
     }
 
     closeAddGuestModal() {
@@ -2669,9 +2674,29 @@ class CheckInApp {
         if (modal) modal.classList.remove('active');
         const form = document.getElementById('addGuestForm');
         if (form) form.reset();
+        const defaultChoice = document.getElementById('choiceCheckInFalse');
+        if (defaultChoice) defaultChoice.checked = true;
     }
 
-    async handleAddNewGuest() {
+    async submitNewGuest(checkInNow = null) {
+        const form = document.getElementById('addGuestForm');
+        if (form && !form.checkValidity()) {
+            form.reportValidity();
+            return;
+        }
+
+        let isCheckedIn = false;
+        if (checkInNow !== null) {
+            isCheckedIn = Boolean(checkInNow);
+        } else {
+            const checkedChoice = document.querySelector('input[name="addGuestCheckInChoice"]:checked');
+            isCheckedIn = checkedChoice ? checkedChoice.value === 'true' : false;
+        }
+
+        await this.handleAddNewGuest(isCheckedIn);
+    }
+
+    async handleAddNewGuest(isCheckedIn = false) {
         const name = document.getElementById('addGuestName')?.value.trim();
         const org = document.getElementById('addGuestOrg')?.value.trim();
         const title = document.getElementById('addGuestTitle')?.value.trim();
@@ -2686,6 +2711,8 @@ class CheckInApp {
         }
 
         const rankWeight = this.calculateRankWeight(title);
+        const user = window.apiService.currentUser;
+        const staff = user ? `${user.displayName || user.username} (工作台)` : '現場報到處';
 
         try {
             await window.apiService.addGuest(this.currentEventId, {
@@ -2697,10 +2724,23 @@ class CheckInApp {
                 phone,
                 notes,
                 rankWeight,
-                isCheckedIn: false
+                isCheckedIn: isCheckedIn,
+                checkedInBy: isCheckedIn ? staff : null
             });
 
-            this.showToast(`貴賓「${name}」已新增！`, 'success');
+            if (isCheckedIn) {
+                if (window.soundManager) {
+                    if (rankWeight <= 2) {
+                        window.soundManager.playVipFanfare();
+                    } else {
+                        window.soundManager.playCheckInSuccess();
+                    }
+                }
+                this.showToast(`✅ 貴賓「${name}」已新增並完成報到！`, 'success');
+            } else {
+                this.showToast(`貴賓「${name}」已新增！`, 'success');
+            }
+
             this.closeAddGuestModal();
             await this.loadGuestsAndStats();
         } catch (err) {

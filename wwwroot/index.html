@@ -710,9 +710,26 @@
           <label class="form-label">備註事項</label>
           <input type="text" id="addGuestNotes" class="form-control" placeholder="例：專題座談與談人，請專人引導" />
         </div>
-        <div class="modal-footer">
+        <div class="form-group" style="margin-top: 10px; padding: 14px 16px; background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 12px;">
+          <div style="font-size: 13px; font-weight: 700; color: #334155; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between;">
+            <span style="display: flex; align-items: center; gap: 6px;"><span style="color: #1A5E42;">⚡</span> 報到狀態選項</span>
+            <span style="font-size: 11px; font-weight: 500; color: #64748B;">可直接點擊下方對應按鈕或預選狀態</span>
+          </div>
+          <div style="display: flex; gap: 24px; align-items: center; flex-wrap: wrap;">
+            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 13.5px; font-weight: 600; color: #475569;">
+              <input type="radio" name="addGuestCheckInChoice" id="choiceCheckInFalse" value="false" checked style="width: 17px; height: 17px; accent-color: #475569; cursor: pointer;" />
+              <span>僅新增名冊 (未報到)</span>
+            </label>
+            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 13.5px; font-weight: 700; color: #15803d;">
+              <input type="radio" name="addGuestCheckInChoice" id="choiceCheckInTrue" value="true" style="width: 17px; height: 17px; accent-color: #16a34a; cursor: pointer;" />
+              <span>現場已到場 (直接完成報到)</span>
+            </label>
+          </div>
+        </div>
+        <div class="modal-footer" style="display: flex; justify-content: flex-end; align-items: center; gap: 10px; flex-wrap: wrap;">
           <button type="button" class="btn btn-secondary" onclick="app.closeAddGuestModal()">取消</button>
-          <button type="submit" class="btn btn-primary">確認新增</button>
+          <button type="button" id="btnAddGuestOnlyBtn" class="btn btn-secondary" style="font-weight: 700; border-color: #94A3B8; color: #1E293B;" onclick="app.submitNewGuest(false)" title="建立貴賓資料，暫不報到">確認新增</button>
+          <button type="button" id="btnAddGuestAndCheckInBtn" class="btn btn-primary" style="font-weight: 700;" onclick="app.submitNewGuest(true)" title="建立貴賓資料並立即標記完成報到">✓ 完成報到</button>
         </div>
       </form>
     </div>
