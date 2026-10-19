@@ -1,10 +1,62 @@
 ﻿-- =============================================================================
 -- InPoint: Zeabur PostgreSQL 遷移至 Railway PostgreSQL 資料匯入腳本
--- 導出時間 (UTC): 2026-10-19T15:26:24.8131875Z
--- 特點: 具備冪等性 (ON CONFLICT DO UPDATE)，可安全重複執行且保證資料完整
+-- 導出時間 (UTC): 2026-10-19T22:03:47.6073421Z
+-- 特點: 自動建表 (CREATE TABLE IF NOT EXISTS) 與冪等插入 (ON CONFLICT DO UPDATE)
 -- =============================================================================
 
 BEGIN;
+
+-- -------------------------------------------------------------
+-- 0. 自動建立資料表結構 (DDL，若不存在則建立)
+-- -------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS "checkInUsers" (
+    "UserId" VARCHAR(100) NOT NULL PRIMARY KEY,
+    "Username" VARCHAR(100) NOT NULL,
+    "PasswordHash" VARCHAR(255) NOT NULL,
+    "Role" VARCHAR(50) NOT NULL,
+    "DisplayName" VARCHAR(100) NULL,
+    "Organization" VARCHAR(200) NULL,
+    "PlanType" VARCHAR(50) NULL,
+    "ExpireAt" TIMESTAMP NULL,
+    "MaxGuestsPerEvent" INT NOT NULL DEFAULT 100,
+    "MaxEvents" INT NOT NULL DEFAULT 1,
+    "IsActive" BOOLEAN NOT NULL DEFAULT TRUE,
+    "CreatedAt" TIMESTAMP NOT NULL DEFAULT NOW(),
+    "Notes" VARCHAR(1000) NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS "IX_checkInUsers_Username" ON "checkInUsers" ("Username");
+
+CREATE TABLE IF NOT EXISTS "checkInEvents" (
+    "EventId" VARCHAR(100) NOT NULL PRIMARY KEY,
+    "EventName" VARCHAR(255) NOT NULL,
+    "EventDate" TIMESTAMP NOT NULL,
+    "Location" VARCHAR(255) NULL,
+    "Description" VARCHAR(1000) NULL,
+    "IsActive" BOOLEAN NOT NULL DEFAULT TRUE,
+    "CreatedAt" TIMESTAMP NOT NULL DEFAULT NOW(),
+    "OwnerUsername" VARCHAR(100) NULL,
+    "RankRules" TEXT NULL
+);
+
+CREATE TABLE IF NOT EXISTS "checkInGuests" (
+    "EventId" VARCHAR(100) NOT NULL,
+    "GuestId" VARCHAR(100) NOT NULL,
+    "Name" VARCHAR(100) NOT NULL,
+    "Organization" VARCHAR(200) NULL,
+    "Title" VARCHAR(100) NULL,
+    "RankWeight" INT NOT NULL DEFAULT 3,
+    "TableNo" VARCHAR(50) NULL,
+    "IsCheckedIn" BOOLEAN NOT NULL DEFAULT FALSE,
+    "CheckedInAt" TIMESTAMP NULL,
+    "CheckedInBy" VARCHAR(100) NULL,
+    "QrCodeHash" VARCHAR(100) NULL,
+    "Phone" VARCHAR(50) NULL,
+    "Notes" VARCHAR(1000) NULL,
+    PRIMARY KEY ("EventId", "GuestId")
+);
+CREATE INDEX IF NOT EXISTS "IX_checkInGuests_EventId" ON "checkInGuests" ("EventId");
+CREATE INDEX IF NOT EXISTS "IX_checkInGuests_QrCodeHash" ON "checkInGuests" ("QrCodeHash");
+
 
 -- -------------------------------------------------------------
 -- 1. checkInUsers (會員與管理者帳號)
@@ -114,6 +166,16 @@ VALUES ('event_20261015_061409_6b980b', '醫療法規實務解析、案例分享
 4.交流討論
 
 會申請醫事人員繼續教育積分：護理/藥放檢/營養/社工/專師/醫師/復健(3T)', TRUE, '2026-10-15T06:14:09.797737Z'::timestamp, 'demo_pei', NULL)
+ON CONFLICT ("EventId") DO UPDATE SET
+    "EventName" = EXCLUDED."EventName",
+    "EventDate" = EXCLUDED."EventDate",
+    "Location" = EXCLUDED."Location",
+    "Description" = EXCLUDED."Description",
+    "IsActive" = EXCLUDED."IsActive",
+    "OwnerUsername" = EXCLUDED."OwnerUsername",
+    "RankRules" = EXCLUDED."RankRules";
+INSERT INTO "checkInEvents" ("EventId", "EventName", "EventDate", "Location", "Description", "IsActive", "CreatedAt", "OwnerUsername", "RankRules")
+VALUES ('event_20261020_055937_53ed8a', 'demo_1020', '2026-10-19T21:59:00Z'::timestamp, 'demo', 'demo', TRUE, '2026-10-19T21:59:37.157499Z'::timestamp, 'annual_demo', NULL)
 ON CONFLICT ("EventId") DO UPDATE SET
     "EventName" = EXCLUDED."EventName",
     "EventDate" = EXCLUDED."EventDate",
@@ -2429,5 +2491,5 @@ DELETE FROM "checkInEvents" WHERE "EventId" = 'event_20260917_084526';
 
 COMMIT;
 -- =============================================================================
--- 遷移 SQL 產生完成！共 5 位使用者、3 場活動、164 筆名冊
+-- 遷移 SQL 產生完成！共 5 位使用者、4 場活動 (含 demo_1020)、164 筆名冊
 -- =============================================================================

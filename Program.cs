@@ -12,7 +12,10 @@ using ShowChwanCheckIn.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
-var rawConnStr = builder.Configuration.GetConnectionString("DefaultConnection");
+var rawConnStr = Environment.GetEnvironmentVariable("DATABASE_URL")
+                 ?? Environment.GetEnvironmentVariable("DATABASE_PRIVATE_URL")
+                 ?? Environment.GetEnvironmentVariable("DATABASE_PUBLIC_URL")
+                 ?? builder.Configuration.GetConnectionString("DefaultConnection");
 var activeConnStr = ResolveWorkingConnectionString(rawConnStr);
 bool useSql = !string.IsNullOrWhiteSpace(activeConnStr);
 bool isPostgres = useSql && (activeConnStr.StartsWith("postgres://") || activeConnStr.StartsWith("postgresql://") || activeConnStr.Contains("Host="));
@@ -261,19 +264,6 @@ static string ResolveWorkingConnectionString(string? rawConnStr)
 
     if (rawConnStr.StartsWith("postgres://") || rawConnStr.StartsWith("postgresql://") || rawConnStr.Contains("Host="))
     {
-        if (rawConnStr.Contains(".railway.internal"))
-        {
-            try
-            {
-                var uri = new Uri(rawConnStr.Replace("postgresql://", "http://").Replace("postgres://", "http://"));
-                System.Net.Dns.GetHostEntry(uri.Host);
-            }
-            catch
-            {
-                Console.WriteLine("[Database] 檢測到 Railway 內部網域名稱於本機無法解析，本機開發端自動切換至備援連線。");
-                return "postgresql://root:WFrQ2E753JL9ec6USijDO01kNM4n8bfg@54.150.14.236:32694/zeabur";
-            }
-        }
         return rawConnStr;
     }
 

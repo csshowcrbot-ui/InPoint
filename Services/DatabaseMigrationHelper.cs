@@ -11,7 +11,7 @@ namespace ShowChwanCheckIn.Services;
 public static class DatabaseMigrationHelper
 {
     private const string LEGACY_ZEABUR_URL = "postgresql://root:WFrQ2E753JL9ec6USijDO01kNM4n8bfg@54.150.14.236:32694/zeabur";
-    private const string TARGET_REAL_EVENT_ID = "event_20261015_061409_6b980b";
+    private const string TARGET_REAL_EVENT_ID = "event_20261020_055937_53ed8a";
     private const string DUMMY_EVENT_ID = "event_20260917_084526";
 
     public record MigrationResult(bool Success, string Message, int EventsCount, int UsersCount, int GuestsCount);

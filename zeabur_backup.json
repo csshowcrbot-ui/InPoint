@@ -1,5 +1,5 @@
 {
-  "ExportedAt": "2026-10-19T15:26:24.8131875Z",
+  "ExportedAt": "2026-10-19T22:03:47.6073421Z",
   "Source": "Zeabur PostgreSQL",
   "Users": [
     {
@@ -110,6 +110,17 @@
       "IsActive": true,
       "CreatedAt": "2026-10-15T06:14:09.797737Z",
       "OwnerUsername": "demo_pei",
+      "RankRules": null
+    },
+    {
+      "EventId": "event_20261020_055937_53ed8a",
+      "EventName": "demo_1020",
+      "EventDate": "2026-10-19T21:59:00Z",
+      "Location": "demo",
+      "Description": "demo",
+      "IsActive": true,
+      "CreatedAt": "2026-10-19T21:59:37.157499Z",
+      "OwnerUsername": "annual_demo",
       "RankRules": null
     }
   ],
