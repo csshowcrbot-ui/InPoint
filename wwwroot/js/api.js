@@ -244,7 +244,7 @@ class ApiService {
             throw new Error(data.message || '試用帳號申請失敗，請稍後再試！');
         }
         if (data.token) {
-            this.setSession(data.token, data);
+            this.saveSession(data.token, data, true);
         }
         return data;
     }
