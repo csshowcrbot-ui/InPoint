@@ -105,6 +105,17 @@ public class CreateMemberRequest
     public string? Notes { get; set; }
 }
 
+public class TrialRegisterRequest
+{
+    public string Username { get; set; } = string.Empty;
+    public string Password { get; set; } = string.Empty;
+    public string DisplayName { get; set; } = string.Empty;
+    public string Organization { get; set; } = string.Empty;
+    public string? Phone { get; set; }
+    public string? Email { get; set; }
+    public string? Notes { get; set; }
+}
+
 public class UpdateMemberRequest
 {
     public string DisplayName { get; set; } = string.Empty;

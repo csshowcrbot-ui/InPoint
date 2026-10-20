@@ -231,6 +231,24 @@ class ApiService {
         this.clearSession();
     }
 
+    // --- Trial Account Registration API ---
+    async registerTrial(trialData) {
+        const res = await fetch(`${this.apiBase}api/auth/register-trial`, {
+            method: 'POST',
+            cache: 'no-store',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(trialData)
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+            throw new Error(data.message || '試用帳號申請失敗，請稍後再試！');
+        }
+        if (data.token) {
+            this.setSession(data.token, data);
+        }
+        return data;
+    }
+
     // --- Member Management APIs (Admin Only) ---
 
     async getMembers() {

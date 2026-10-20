@@ -8,36 +8,40 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>智慧活動報到系統 | InPoint Check-in & Host Dashboard</title>
   <meta name="description" content="智慧活動報到系統與主持人即時戰情看板 - 簡約極致體驗、VIP尊榮階層排序、相機秒級QR掃描與多端即時同步。" />
-  <link rel="stylesheet" href="css/style.css?v=20261010_02" />
+  <link rel="stylesheet" href="css/style.css?v=20261020_trial" />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎯</text></svg>" />
 </head>
 <body>
 
   <!-- ========================================================================= -->
-  <!-- 0. LOGIN SCREEN OVERLAY (Requirement 1 & 2: Complete privacy until login) -->
+  <!-- 0. LOGIN & TRIAL REGISTRATION OVERLAY                                     -->
   <!-- ========================================================================= -->
   <div class="login-overlay" id="loginOverlay">
-    <div class="login-card">
+    <div class="login-card" id="loginCard">
       <div class="login-header">
         <div class="login-logo">🎯</div>
         <div class="login-title">InPoint 智慧活動報到系統</div>
         <div class="login-subtitle">尊榮 VIP 智能排序 ‧ 秒級雲端跨端同步 ‧ 企業級會展方案</div>
       </div>
 
-      <!-- Login Role Switcher Tabs -->
+      <!-- Login Role / Trial Switcher Tabs -->
       <div class="login-tabs">
         <button type="button" class="login-tab-btn active" id="loginTabMember" onclick="app.switchLoginTab('Member')">
-          <span>👤 一般會員登入</span>
+          <span>👤 一般會員</span>
         </button>
         <button type="button" class="login-tab-btn" id="loginTabAdmin" onclick="app.switchLoginTab('Admin')">
-          <span>🛡️ 系統管理者登入</span>
+          <span>🛡️ 系統管理</span>
+        </button>
+        <button type="button" class="login-tab-btn" id="loginTabTrial" onclick="app.switchLoginTab('Trial')">
+          <span>🎁 申請免費試用</span>
         </button>
       </div>
 
-      <!-- Login Form -->
+      <!-- Login Body Container -->
       <div class="login-body">
         <div class="login-alert" id="loginAlertBox"></div>
 
+        <!-- 1. Regular Login Form (Member / Admin) -->
         <form id="loginForm" onsubmit="app.handleLoginSubmit(event)">
           <div class="form-group" style="margin-bottom: 14px;">
             <label class="form-label" id="loginUsernameLabel">會員帳號</label>
@@ -55,6 +59,95 @@
           <button type="submit" class="btn btn-primary" id="loginSubmitBtn" style="width: 100%; padding: 12px; font-size: 15px; font-weight: 700; justify-content: center; box-shadow: 0 4px 14px rgba(26,94,66,0.25);">
             🚀 安全驗證登入
           </button>
+
+          <!-- Trial Promotion Box inside Login Card -->
+          <div class="login-trial-promo" style="margin-top: 18px; padding: 14px 16px; background: #F8FAFC; border: 1px dashed #CBD5E1; border-radius: 14px; text-align: center;">
+            <div style="font-size: 13px; font-weight: 800; color: #1E293B; display: flex; align-items: center; justify-content: center; gap: 6px;">
+              <span>🎁 免費體驗 InPoint 智慧活動報到</span>
+            </div>
+            <div style="font-size: 12px; color: #64748B; margin: 4px 0 10px 0; line-height: 1.4;">
+              開放建立 <strong>1 場活動</strong> ‧ 單場 <strong>30 位貴賓</strong> 額度<br>
+              完整體驗秒級跨端同步與 VIP 尊榮排序！
+            </div>
+            <button type="button" class="btn btn-secondary" onclick="app.switchLoginTab('Trial')" style="width: 100%; font-size: 13px; padding: 8px 12px; font-weight: 700; color: var(--primary-forest); border-color: var(--primary-forest); background: #FFFFFF; box-shadow: 0 2px 6px rgba(26,94,66,0.08);">
+              ✨ 立即填寫基本資料申請試用
+            </button>
+          </div>
+        </form>
+
+        <!-- 2. Free Trial Application Form -->
+        <form id="trialForm" style="display: none;" onsubmit="app.handleTrialSubmit(event)">
+          <!-- Trial Feature Benefits Banner -->
+          <div class="trial-benefits-banner" style="background: linear-gradient(135deg, #FEF3C7, #FDE68A); border: 1px solid #F59E0B; border-radius: 12px; padding: 12px 14px; margin-bottom: 16px;">
+            <div style="display: flex; align-items: center; gap: 6px; font-weight: 800; color: #92400E; font-size: 13px; margin-bottom: 4px;">
+              <span>🌟 InPoint 尊榮試用方案特權</span>
+            </div>
+            <ul style="margin: 0; padding-left: 18px; font-size: 12px; color: #78350F; line-height: 1.5;">
+              <li>開放新增場次：<strong>1 次</strong></li>
+              <li>活動貴賓人數上限：<strong>30 人</strong></li>
+              <li>有效試用天數：<strong>30 天免費體驗</strong></li>
+              <li>試用滿意後續付費後，可直接<strong>無痛升級為正式一般會員</strong>！</li>
+            </ul>
+          </div>
+
+          <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
+            <div class="form-group">
+              <label class="form-label" style="font-size: 12.5px;">登入帳號 *</label>
+              <input type="text" id="trialUsername" class="form-control" placeholder="建議英文或數字" required autocomplete="username" />
+            </div>
+            <div class="form-group">
+              <label class="form-label" style="font-size: 12.5px;">姓名 / 稱謂 *</label>
+              <input type="text" id="trialDisplayName" class="form-control" placeholder="例：王小明" required />
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 12px;">
+            <label class="form-label" style="font-size: 12.5px;">所屬單位 / 公司機構名稱 *</label>
+            <input type="text" id="trialOrganization" class="form-control" placeholder="例：台北醫學中心 / 創新科技有限公司" required />
+          </div>
+
+          <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
+            <div class="form-group">
+              <label class="form-label" style="font-size: 12.5px;">聯絡電話 / 手機 *</label>
+              <input type="tel" id="trialPhone" class="form-control" placeholder="例：0912-345-678" required />
+            </div>
+            <div class="form-group">
+              <label class="form-label" style="font-size: 12.5px;">電子信箱 (選填)</label>
+              <input type="email" id="trialEmail" class="form-control" placeholder="例：service@org.tw" />
+            </div>
+          </div>
+
+          <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px;">
+            <div class="form-group">
+              <label class="form-label" style="font-size: 12.5px;">設定登入密碼 *</label>
+              <div style="position: relative;">
+                <input type="password" id="trialPassword" class="form-control" placeholder="至少4個字元" required autocomplete="new-password" style="padding-right: 36px;" />
+                <button type="button" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; font-size: 14px; color: var(--text-muted); padding: 4px;" onclick="app.togglePasswordVisibility('trialPassword', this)">👁️</button>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label" style="font-size: 12.5px;">再次確認密碼 *</label>
+              <div style="position: relative;">
+                <input type="password" id="trialPasswordConfirm" class="form-control" placeholder="請再輸入一次密碼" required autocomplete="new-password" style="padding-right: 36px;" />
+                <button type="button" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; font-size: 14px; color: var(--text-muted); padding: 4px;" onclick="app.togglePasswordVisibility('trialPasswordConfirm', this)">👁️</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 16px;">
+            <label class="form-label" style="font-size: 12.5px;">預計活動類型 / 試用需求 (選填)</label>
+            <input type="text" id="trialNotes" class="form-control" placeholder="例：2026 年會籌備小組、部門研習會體驗試辦" />
+          </div>
+
+          <button type="submit" class="btn btn-primary" id="trialSubmitBtn" style="width: 100%; padding: 12px; font-size: 15px; font-weight: 700; justify-content: center; background: linear-gradient(135deg, #1A5E42, #2E7D32); box-shadow: 0 4px 14px rgba(26,94,66,0.25);">
+            🚀 立即送出申請並登入體驗 (開放 30 人 / 1 場)
+          </button>
+
+          <div style="text-align: center; margin-top: 14px;">
+            <button type="button" class="btn-link" onclick="app.switchLoginTab('Member')" style="background: none; border: none; color: #64748B; font-size: 12.5px; cursor: pointer; text-decoration: underline;">
+              已有會員帳號？點此返回登入
+            </button>
+          </div>
         </form>
       </div>
     </div>
@@ -532,14 +625,21 @@
           </div>
           <div class="member-stat-box">
             <div>
-              <div class="title">🌟 單場活動方案 (輕量/標準/旗艦)</div>
+              <div class="title">🎁 免費試用會員 (30人/1場)</div>
+              <div class="number" id="memberStatTrial" style="color: #D97706;">0</div>
+            </div>
+            <div class="icon">🎁</div>
+          </div>
+          <div class="member-stat-box">
+            <div>
+              <div class="title">🌟 一般會員 (單場 100~600人)</div>
               <div class="number" id="memberStatSingle" style="color: #0284C7;">0</div>
             </div>
             <div class="icon">🎟️</div>
           </div>
           <div class="member-stat-box">
             <div>
-              <div class="title">👑 機構年度方案 (1500人/多場次)</div>
+              <div class="title">👑 機構年度 (1500人/多場次)</div>
               <div class="number" id="memberStatAnnual" style="color: #B45309;">0</div>
             </div>
             <div class="icon">🏢</div>
@@ -987,15 +1087,21 @@
           </div>
         </div>
 
+        <!-- Upgrade Banner if member is Trial -->
+        <div id="editMemberTrialNotice" style="display: none; background: #FEF3C7; border: 1px solid #F59E0B; border-radius: 8px; padding: 10px 14px; margin-bottom: 14px; font-size: 12.5px; color: #92400E;">
+          🎁 <strong>此帳號為試用會員 (限額 30 人 / 1 場)</strong>：後續付費後，切換下方方案類型為任一<strong>「一般會員」</strong>並儲存，即可立即升級為正式一般會員！
+        </div>
+
         <div class="form-row">
           <div class="form-group">
-            <label class="form-label">方案類型</label>
+            <label class="form-label">方案類型與等級</label>
             <select id="editMemberPlanType" class="form-control" onchange="app.handleEditPlanTypeChange()">
-              <option value="SingleEvent_Light">🟢 單場活動 - 輕量級 (100人內 / NT$ 1,990)</option>
-              <option value="SingleEvent_Standard">🔵 單場活動 - 標準級 (101～300人 / NT$ 3,490)</option>
-              <option value="SingleEvent_Flagship">🟣 單場活動 - 旗艦級 (301～600人 / NT$ 5,490)</option>
-              <option value="AnnualOrg">👑 機構年度方案 (1500人 / 無限場次 / 範本複製)</option>
-              <option value="SingleEvent" style="display: none;">🌟 單場活動方案 (自訂規格)</option>
+              <option value="Trial">🎁 免費試用方案 (30人 / 1場 / 30天)</option>
+              <option value="SingleEvent_Light">🟢 一般會員 - 單場輕量級 (100人內 / NT$ 1,990)</option>
+              <option value="SingleEvent_Standard">🔵 一般會員 - 單場標準級 (101～300人 / NT$ 3,490)</option>
+              <option value="SingleEvent_Flagship">🟣 一般會員 - 單場旗艦級 (301～600人 / NT$ 5,490)</option>
+              <option value="AnnualOrg">👑 一般會員 - 機構年度方案 (1500人 / 無限場次 / 範本複製)</option>
+              <option value="SingleEvent" style="display: none;">🌟 一般會員 - 單場自訂規格</option>
             </select>
           </div>
           <div class="form-group">
@@ -1376,9 +1482,9 @@
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
   <!-- Scripts (with Cache Buster) -->
-  <script src="js/qrcode-lib.js?v=20261019_04"></script>
-  <script src="js/audio.js?v=20261019_04"></script>
-  <script src="js/api.js?v=20261019_04"></script>
-  <script src="js/app.js?v=20261019_04"></script>
+  <script src="js/qrcode-lib.js?v=20261020_trial"></script>
+  <script src="js/audio.js?v=20261020_trial"></script>
+  <script src="js/api.js?v=20261020_trial"></script>
+  <script src="js/app.js?v=20261020_trial"></script>
 </body>
 </html>

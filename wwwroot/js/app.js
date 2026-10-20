@@ -373,21 +373,125 @@ class CheckInApp {
         this.loginRole = role;
         const tabMem = document.getElementById('loginTabMember');
         const tabAdm = document.getElementById('loginTabAdmin');
+        const tabTrial = document.getElementById('loginTabTrial');
         const userLabel = document.getElementById('loginUsernameLabel');
         const userInp = document.getElementById('loginUsername');
         const alertBox = document.getElementById('loginAlertBox');
+        const loginForm = document.getElementById('loginForm');
+        const trialForm = document.getElementById('trialForm');
+        const loginCard = document.getElementById('loginCard');
+
         if (alertBox) alertBox.style.display = 'none';
 
-        if (role === 'Admin') {
+        if (role === 'Trial') {
             if (tabMem) tabMem.classList.remove('active');
+            if (tabAdm) tabAdm.classList.remove('active');
+            if (tabTrial) tabTrial.classList.add('active');
+            if (loginForm) loginForm.style.display = 'none';
+            if (trialForm) trialForm.style.display = 'block';
+            if (loginCard) loginCard.classList.add('wide');
+        } else if (role === 'Admin') {
+            if (tabMem) tabMem.classList.remove('active');
+            if (tabTrial) tabTrial.classList.remove('active');
             if (tabAdm) tabAdm.classList.add('active');
+            if (trialForm) trialForm.style.display = 'none';
+            if (loginForm) loginForm.style.display = 'block';
+            if (loginCard) loginCard.classList.remove('wide');
             if (userLabel) userLabel.innerText = '管理帳號';
             if (userInp) userInp.placeholder = '請輸入管理帳號';
         } else {
             if (tabAdm) tabAdm.classList.remove('active');
+            if (tabTrial) tabTrial.classList.remove('active');
             if (tabMem) tabMem.classList.add('active');
+            if (trialForm) trialForm.style.display = 'none';
+            if (loginForm) loginForm.style.display = 'block';
+            if (loginCard) loginCard.classList.remove('wide');
             if (userLabel) userLabel.innerText = '會員帳號';
             if (userInp) userInp.placeholder = '請輸入會員帳號';
+        }
+    }
+
+    async handleTrialSubmit(e) {
+        if (e) e.preventDefault();
+        const username = document.getElementById('trialUsername')?.value.trim() || '';
+        const displayName = document.getElementById('trialDisplayName')?.value.trim() || '';
+        const org = document.getElementById('trialOrganization')?.value.trim() || '';
+        const phone = document.getElementById('trialPhone')?.value.trim() || '';
+        const email = document.getElementById('trialEmail')?.value.trim() || '';
+        const password = document.getElementById('trialPassword')?.value.trim() || '';
+        const passwordConfirm = document.getElementById('trialPasswordConfirm')?.value.trim() || '';
+        const notes = document.getElementById('trialNotes')?.value.trim() || '';
+        const alertBox = document.getElementById('loginAlertBox');
+        const submitBtn = document.getElementById('trialSubmitBtn');
+
+        if (!username || !password || !displayName || !org || !phone) {
+            if (alertBox) {
+                alertBox.className = 'login-alert danger';
+                alertBox.innerText = '請完整填寫帳號、密碼、姓名、所屬機構與聯絡電話！';
+                alertBox.style.display = 'block';
+            }
+            return;
+        }
+
+        if (password.length < 4) {
+            if (alertBox) {
+                alertBox.className = 'login-alert danger';
+                alertBox.innerText = '登入密碼長度至少需 4 個字元！';
+                alertBox.style.display = 'block';
+            }
+            return;
+        }
+
+        if (password !== passwordConfirm) {
+            if (alertBox) {
+                alertBox.className = 'login-alert danger';
+                alertBox.innerText = '兩次輸入的密碼不一致，請重新確認！';
+                alertBox.style.display = 'block';
+            }
+            return;
+        }
+
+        try {
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.innerText = '申請開通試用中...';
+            }
+
+            const res = await window.apiService.registerTrial({
+                username,
+                password,
+                displayName,
+                organization: org,
+                phone,
+                email,
+                notes
+            });
+
+            if (res.success) {
+                this.hideLoginOverlay();
+                this.renderUserHeader(res);
+                this.showToast(res.message || '🎉 試用帳號申請成功！已開放 1 場活動與 30 人貴賓上限。', 'success');
+                this.resetStats();
+                this.currentEventId = '';
+                await this.loadEvents();
+                if (this.currentEventId) {
+                    await this.loadGuestsAndStats();
+                } else {
+                    this.resetStats();
+                    this.renderAllViews();
+                }
+            }
+        } catch (err) {
+            if (alertBox) {
+                alertBox.className = 'login-alert danger';
+                alertBox.innerText = err.message || '申請試用失敗，請稍後再試！';
+                alertBox.style.display = 'block';
+            }
+        } finally {
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.innerText = '🚀 立即送出申請並登入體驗 (開放 30 人 / 1 場)';
+            }
         }
     }
 
@@ -446,22 +550,20 @@ class CheckInApp {
     }
 
     handleLogout() {
-        if (confirm('確定要登出系統嗎？')) {
-            window.apiService.logout();
-            const widget = document.getElementById('headerUserWidget');
-            if (widget) widget.style.display = 'none';
-            const navMembers = document.getElementById('navTabMembers');
-            if (navMembers) navMembers.style.display = 'none';
-            const navAi = document.getElementById('navTabAi');
-            if (navAi) navAi.style.display = '';
-            this.events = [];
-            this.currentEventId = '';
-            this.resetStats();
-            this.populateEventSelector();
-            this.renderAllViews();
-            this.showLoginOverlay();
-            this.showToast('您已安全登出', 'info');
-        }
+        window.apiService.logout();
+        const widget = document.getElementById('headerUserWidget');
+        if (widget) widget.style.display = 'none';
+        const navMembers = document.getElementById('navTabMembers');
+        if (navMembers) navMembers.style.display = 'none';
+        const navAi = document.getElementById('navTabAi');
+        if (navAi) navAi.style.display = '';
+        this.events = [];
+        this.currentEventId = '';
+        this.resetStats();
+        this.populateEventSelector();
+        this.renderAllViews();
+        this.showLoginOverlay();
+        this.showToast('您已安全登出系統', 'info');
     }
 
     renderUserHeader(user) {
@@ -497,7 +599,12 @@ class CheckInApp {
             if (this.currentTab === 'members') {
                 this.switchTab('staff');
             }
-            if (user.planType === 'AnnualOrg') {
+            if (user.planType === 'Trial') {
+                if (planBadge) {
+                    planBadge.className = 'plan-badge-trial';
+                    planBadge.innerText = '🎁 試用體驗 (30人/1場)';
+                }
+            } else if (user.planType === 'AnnualOrg') {
                 if (planBadge) {
                     planBadge.className = 'plan-badge-annual';
                     planBadge.innerText = '👑 機構年度 (1500人/多場次)';
@@ -558,16 +665,19 @@ class CheckInApp {
 
     updateMemberStats() {
         const totalBox = document.getElementById('memberStatTotal');
+        const trialBox = document.getElementById('memberStatTrial');
         const singleBox = document.getElementById('memberStatSingle');
         const annualBox = document.getElementById('memberStatAnnual');
         const expiringBox = document.getElementById('memberStatExpiring');
 
         const total = this.members.length;
-        const single = this.members.filter(m => m.planType !== 'AnnualOrg' && m.role !== 'Admin').length;
+        const trial = this.members.filter(m => m.planType === 'Trial').length;
+        const single = this.members.filter(m => m.planType !== 'AnnualOrg' && m.planType !== 'Trial' && m.role !== 'Admin').length;
         const annual = this.members.filter(m => m.planType === 'AnnualOrg').length;
         const expiring = this.members.filter(m => m.isExpired || m.remainingDays <= 3).length;
 
         if (totalBox) totalBox.innerText = total;
+        if (trialBox) trialBox.innerText = trial;
         if (singleBox) singleBox.innerText = single;
         if (annualBox) annualBox.innerText = annual;
         if (expiringBox) expiringBox.innerText = expiring;
@@ -591,7 +701,9 @@ class CheckInApp {
         tbody.innerHTML = members.map(m => {
             const isSingle = m.planType !== 'AnnualOrg';
             let planBadge = '';
-            if (!isSingle) {
+            if (m.planType === 'Trial') {
+                planBadge = `<span class="plan-badge-trial" title="試用帳號：開放 1 場活動 / 單場 30 位貴賓上限">🎁 試用體驗 (30人/1場)</span>`;
+            } else if (!isSingle) {
                 planBadge = `<span class="plan-badge-annual" title="無限場次、1500人上限、範本複製">👑 機構年度 (1500人/多場次)</span>`;
             } else {
                 const maxG = m.maxGuestsPerEvent || 100;
@@ -645,6 +757,10 @@ class CheckInApp {
                 } catch (e) {}
             }
 
+            const upgradeBtn = m.planType === 'Trial'
+                ? `<button class="btn btn-secondary" style="font-size: 11px; padding: 4px 8px; color: #92400E; background: #FEF3C7; border-color: #F59E0B; font-weight: 800;" onclick="app.upgradeToRegularMember('${m.userId}')" title="付費後升級維護成一般會員">👑 升級一般會員</button>`
+                : '';
+
             return `
               <tr>
                 <td>
@@ -668,6 +784,7 @@ class CheckInApp {
                 <td style="text-align: center;">${statusBadge}</td>
                 <td style="text-align: center;">
                   <div style="display: flex; gap: 6px; justify-content: center; align-items: center; flex-wrap: wrap;">
+                    ${upgradeBtn}
                     <button class="btn btn-secondary" style="font-size: 11px; padding: 4px 8px; color: var(--primary-forest); font-weight: 700;" onclick="app.openMemberEventsModal('${m.userId}', '${this.escapeHtml(m.username)}', '${this.escapeHtml(m.displayName || m.organization)}')" title="活動管理：停用/封存、刪除、複製為新範本">📂 活動管理</button>
                     <button class="btn btn-secondary" style="font-size: 11px; padding: 4px 8px;" onclick="app.showEditMemberModal('${m.userId}')" title="編輯方案或延長效期">✏️ 編輯/續約</button>
                     <button class="btn btn-secondary" style="font-size: 11px; padding: 4px 8px;" onclick="app.toggleMemberStatus('${m.userId}')" title="切換啟用/停用">${m.isActive ? '⏸️' : '▶️'}</button>
@@ -798,9 +915,11 @@ class CheckInApp {
         document.getElementById('editMemberOrg').value = member.organization || '';
         document.getElementById('editMemberDisplayName').value = member.displayName || '';
 
-        // Map planType to the 3 single tiers or AnnualOrg
+        // Map planType to Trial, the 3 single tiers or AnnualOrg
         let mappedPlanType = member.planType;
-        if (member.planType === 'SingleEvent' || !member.planType) {
+        if (member.planType === 'Trial') {
+            mappedPlanType = 'Trial';
+        } else if (member.planType === 'SingleEvent' || !member.planType) {
             const mg = member.maxGuestsPerEvent || 100;
             if (mg <= 100) mappedPlanType = 'SingleEvent_Light';
             else if (mg <= 300) mappedPlanType = 'SingleEvent_Standard';
@@ -812,12 +931,33 @@ class CheckInApp {
         document.getElementById('editMemberNotes').value = member.notes || '';
         document.getElementById('editMemberPassword').value = '';
 
+        const trialNotice = document.getElementById('editMemberTrialNotice');
+        if (trialNotice) {
+            trialNotice.style.display = (member.planType === 'Trial') ? 'block' : 'none';
+        }
+
         if (member.expireAt) {
             document.getElementById('editMemberExpireAt').value = new Date(member.expireAt).toISOString().split('T')[0];
         }
 
         const modal = document.getElementById('editMemberModal');
         if (modal) modal.classList.add('active');
+    }
+
+    upgradeToRegularMember(userId) {
+        this.showEditMemberModal(userId);
+        const planSelect = document.getElementById('editMemberPlanType');
+        if (planSelect) {
+            planSelect.value = 'SingleEvent_Light';
+            this.handleEditPlanTypeChange();
+        }
+        const expireInput = document.getElementById('editMemberExpireAt');
+        if (expireInput) {
+            const d = new Date();
+            d.setDate(d.getDate() + 30);
+            expireInput.value = d.toISOString().split('T')[0];
+        }
+        this.showToast('💡 已切換為「一般會員 - 單場輕量級」方案，確認效期與人數後點擊「儲存變更」即可生效！', 'info');
     }
 
     closeEditMemberModal() {
@@ -828,7 +968,9 @@ class CheckInApp {
     handleEditPlanTypeChange() {
         const plan = document.getElementById('editMemberPlanType').value;
         const maxGuestsInput = document.getElementById('editMemberMaxGuests');
-        if (plan === 'AnnualOrg') {
+        if (plan === 'Trial') {
+            maxGuestsInput.value = '30';
+        } else if (plan === 'AnnualOrg') {
             maxGuestsInput.value = '1500';
         } else if (plan === 'SingleEvent_Light') {
             maxGuestsInput.value = '100';
@@ -837,7 +979,7 @@ class CheckInApp {
         } else if (plan === 'SingleEvent_Flagship') {
             maxGuestsInput.value = '600';
         } else {
-            maxGuestsInput.value = '300';
+            maxGuestsInput.value = '100';
         }
     }
 
@@ -1222,7 +1364,10 @@ class CheckInApp {
     showCreateEventModal() {
         const user = window.apiService.currentUser;
         if (user && user.role !== 'Admin' && user.planType !== 'AnnualOrg' && this.events.length >= 1) {
-            alert('⚠️ 您目前的【單場活動方案】僅限建立 1 場活動！\n\n如需舉辦多場活動或使用範本複製功能，請升級為【機構年度方案】！');
+            const msg = user.planType === 'Trial'
+                ? '⚠️ 您目前的【免費試用方案】已建立 1 場活動（限額 30 人）！\n\n試用期滿或需舉辦更多活動與擴增人數，可隨時付費升級為【一般會員】！'
+                : '⚠️ 您目前的【單場活動方案】僅限建立 1 場活動！\n\n如需舉辦多場活動或使用範本複製功能，請升級為【機構年度方案】！';
+            alert(msg);
             return;
         }
 

@@ -144,6 +144,25 @@
 
 ---
 
+### 7. 免費試用申請與會員方案升級維護 (Trial & Member Upgrade)
+> 路徑：`index.html` ➜ 登入畫面【🎁 申請免費試用】/ 管理員後台【👥 會員與方案管理】
+
+- **登入畫面免登入直接申請試用**：
+  - 登入畫面提供 `👤 一般會員`、`🛡️ 系統管理`、`🎁 申請免費試用` 三大標籤切換，登入表單下方亦附快捷申請引導卡片。
+  - 申請填寫基本資料：會員帳號、姓名/稱謂、所屬單位/機構、聯絡電話、電子信箱、登入密碼與確認密碼、需求備註。
+  - 送出申請後系統即刻開通並**自動登入**，直接享受 InPoint 智慧活動報到系統。
+- **試用規格與嚴格限額控管**：
+  - **開放新增場次**：1 次（`MaxEvents = 1`，嘗試建立第 2 場時自動攔截並提示可升級一般會員）。
+  - **單場貴賓人數上限**：30 人（`MaxGuestsPerEvent = 30`，單筆或批次超過 30 人時自動攔截）。
+  - **試用天數**：預設 30 天體驗期。
+  - **專屬身分標籤**：右上角標註金黃色 `🎁 試用體驗 (30人/1場)`。
+- **後續付費一鍵維護成一般會員**：
+  - 管理者後台會員列表即時掌握試用會員申請數量與名單。
+  - 試用會員項目提供專屬黃金按鈕 `👑 升級一般會員`，一鍵自動切換為正式一般會員方案（如單場活動輕量級 100 人、標準級 300 人、旗艦級 600 人或機構年度 1500 人）。
+  - 儲存後立即生效，帳號名下所有已建立活動與名冊資料完整保留，解鎖場次與貴賓人數限制！
+
+---
+
 ## 🌐 網頁存取路徑一覽
 
 | 頁面功能 | 相對存取路徑 | 適用情境 |
@@ -215,50 +234,12 @@
 
 ---
 
-## 🚀 雲端部署與 Zeabur 資料庫移轉至 Railway 操作指引
+## 🚀 雲端與主機部署指引 (Railway / Docker / IIS)
 
-### 🔄 Zeabur 資料庫移轉至 Railway
-
-本系統已自 Zeabur 正式環境提取完整備份，包含：
-- **3 場正式歷史活動**（`DEMO`、`打造永續共好地方創生計劃`、`醫療法規實務解析、案例分享及醫療爭議調解現況`）
-- **164 筆真實貴賓名單與席位**（含手機號碼、報到註記、桌號與職級排序）
-- **5 個會員與管理員帳號**（`admin`, `annual_demo`, `demo_pei`, `demo_01`, `single_demo`）
-
-提供以下四種方式輕鬆完成遷移至 Railway：
-
-#### 方案 1：雲端自動熱遷移 (最簡單，自動執行)
-1. 直接將此最新程式碼推送至 GitHub 儲存庫 `main` 分支。
-2. Railway 重新構建並啟動容器後，系統在啟動階段會自動檢查 Railway PostgreSQL 是否包含真實活動。
-3. 若尚未同步，系統會優先直連 Zeabur 進行同步；若外部網路受阻，則會自動載入專案內建的 `migration_zeabur_to_railway.sql` 進行快照還原，並自動清理初期的假活動「月烤月嗨」。
-
-#### 方案 2：Railway 控制台 Web 一鍵貼上執行 (最直覺)
-1. 登入 [Railway Dashboard](https://railway.app/)，點選專案中的 **PostgreSQL 服務**。
-2. 切換至 **「Data」** ➜ **「Query」** 分頁。
-3. 開啟本專案根目錄下的 [`migration_zeabur_to_railway.sql`](file:///c:/AI%20TOOLS/InPoint/migration_zeabur_to_railway.sql)，將內容全選複製並貼入 Query 視窗，點擊 **Run Query**。
-4. 腳本具備 `ON CONFLICT DO UPDATE` 冪等性，可重複安全執行，瞬間完成所有資料寫入！
-
-#### 方案 3：本機工具一鍵推送 (適合開發人員)
-若您已在 Railway PostgreSQL 的 **Settings** ➜ **Networking** 開啟了 **Public Networking / TCP Proxy**，可於本機終端機直接執行：
-```powershell
-dotnet run --project scratch/DbMigrator "<Railway公開連線字串>"
-# 範例：
-# dotnet run --project scratch/DbMigrator "postgresql://postgres:密碼@junction.proxy.rlwy.net:12345/railway"
-```
-工具將直接連線 Railway 並完成 100% 資料寫入與自動校驗。
-
-#### 方案 4：線上 API 即時重跑遷移
-若伺服器已在線上運行，可隨時發送 POST 請求至管理端點強制重新同步：
-```bash
-curl -X POST https://您的Railway網址/api/admin/migrate-from-zeabur \
-     -H "X-Admin-Password: ZiEiHrpPq@"
-```
-亦可透過 GET 請求檢查遷移狀態：
-```bash
-curl https://您的Railway網址/api/admin/migration-status \
-     -H "X-Admin-Password: ZiEiHrpPq@"
-```
-
----
+### 方案 A：Railway 平台一鍵雲端部署 (建議)
+1. 將程式碼推送到 GitHub 儲存庫 `main` 分支。
+2. Railway 專案綁定 GitHub 儲存庫後，平台會依據專案配置自動觸發 Docker Build 與啟動。
+3. 容器首次啟動時，會自動檢查資料庫結構並觸發**自動熱遷移 (Live Migration)**，無縫轉移所有活動與貴賓名單。
 
 ### 方案 B：Windows IIS 主機發布
 1. 在開發目錄下執行發布腳本：

@@ -282,7 +282,24 @@ static string ResolveWorkingConnectionString(string? rawConnStr)
 
     if (rawConnStr.StartsWith("postgres://") || rawConnStr.StartsWith("postgresql://") || rawConnStr.Contains("Host="))
     {
-        return rawConnStr;
+        try
+        {
+            var pgConnStr = ConvertPostgresUrlToConnectionString(rawConnStr);
+            var npgBuilder = new NpgsqlConnectionStringBuilder(pgConnStr)
+            {
+                Timeout = 3,
+                CommandTimeout = 3
+            };
+            using var pgConn = new NpgsqlConnection(npgBuilder.ConnectionString);
+            pgConn.Open();
+            Console.WriteLine("[PostgreSQL DB] 成功連接至 PostgreSQL 資料庫。");
+            return rawConnStr;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[PostgreSQL DB] 無法連線至遠端 PostgreSQL 主機 ({ex.Message})，自動平滑降級為 InMemory 模式以確保本機系統正常運行。");
+            return string.Empty;
+        }
     }
 
     var serverCandidates = new List<string>();
@@ -604,9 +621,19 @@ app.MapPost("/api/auth/login", async (LoginRequest req, IEventService service) =
     );
     activeSessions[memToken] = memSession;
 
-    string welcomeMsg = isExpired
-        ? $"⚠️ 您的方案已於 {user.ExpireAt:yyyy-MM-dd} 到期，目前為唯讀狀態，請聯繫管理員續約！"
-        : $"🎉 登入成功！歡迎【{user.Organization}】{user.DisplayName}（方案有效天數剩餘 {remainingDays} 天）";
+    string welcomeMsg;
+    if (isExpired)
+    {
+        welcomeMsg = user.PlanType == "Trial"
+            ? $"⚠️ 您的試用體驗已於 {user.ExpireAt:yyyy-MM-dd} 到期，目前為唯讀狀態，請洽管理員升級為一般會員！"
+            : $"⚠️ 您的方案已於 {user.ExpireAt:yyyy-MM-dd} 到期，目前為唯讀狀態，請聯繫管理員續約！";
+    }
+    else
+    {
+        welcomeMsg = user.PlanType == "Trial"
+            ? $"🎉 登入成功！歡迎【{user.Organization}】{user.DisplayName}（🎁 免費試用方案：開放 1 場次、限額 30 人，試用期剩餘 {remainingDays} 天）"
+            : $"🎉 登入成功！歡迎【{user.Organization}】{user.DisplayName}（方案有效天數剩餘 {remainingDays} 天）";
+    }
 
     return Results.Ok(new LoginResponse
     {
@@ -623,6 +650,92 @@ app.MapPost("/api/auth/login", async (LoginRequest req, IEventService service) =
         IsExpired = isExpired,
         RemainingDays = remainingDays,
         Message = welcomeMsg
+    });
+});
+
+// Trial Account Registration API (免費試用申請: 開放 1 場次、30 人貴賓上限、可後續付費升級為一般會員)
+app.MapPost("/api/auth/register-trial", async (TrialRegisterRequest req, IEventService service) =>
+{
+    var username = req.Username?.Trim() ?? "";
+    var password = req.Password?.Trim() ?? "";
+    var displayName = req.DisplayName?.Trim() ?? "";
+    var org = req.Organization?.Trim() ?? "";
+    var phone = req.Phone?.Trim() ?? "";
+    var email = req.Email?.Trim() ?? "";
+    var notes = req.Notes?.Trim() ?? "";
+
+    if (string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(password))
+    {
+        return Results.BadRequest(new { success = false, message = "請填寫會員帳號與登入密碼！" });
+    }
+
+    if (string.IsNullOrWhiteSpace(displayName) || string.IsNullOrWhiteSpace(org))
+    {
+        return Results.BadRequest(new { success = false, message = "請填寫姓名/稱謂與所屬機構/單位名稱！" });
+    }
+
+    if (password.Length < 4)
+    {
+        return Results.BadRequest(new { success = false, message = "密碼長度至少需 4 個字元！" });
+    }
+
+    var existing = await service.GetUserByUsernameAsync(username);
+    if (existing != null)
+    {
+        return Results.BadRequest(new { success = false, message = $"帳號「{username}」已被註冊，請更換其他帳號名稱！" });
+    }
+
+    // 試用帳號：開放 1 場次活動、單場 30 位貴賓上限、30 天試用期
+    var newUser = new User
+    {
+        UserId = "user_trial_" + Guid.NewGuid().ToString("N")[..12],
+        Username = username,
+        PasswordHash = InMemoryEventService.HashPassword(password),
+        Role = "Member",
+        DisplayName = displayName,
+        Organization = org,
+        PlanType = "Trial",
+        ExpireAt = DateTime.UtcNow.AddDays(30),
+        MaxGuestsPerEvent = 30,
+        MaxEvents = 1,
+        IsActive = true,
+        CreatedAt = DateTime.UtcNow,
+        Notes = $"【試用申請】聯絡電話: {phone} | 信箱: {email} | 需求說明: {notes}".Trim()
+    };
+
+    var created = await service.CreateUserAsync(newUser);
+
+    // 自動為申請者建立登入 Session，申請後即刻登入
+    var memToken = $"inpoint_mem_{created.Username}_{Guid.NewGuid():N}";
+    var memSession = new UserSession(
+        created.UserId,
+        created.Username,
+        "Member",
+        created.DisplayName,
+        created.Organization,
+        created.PlanType,
+        created.ExpireAt,
+        created.MaxGuestsPerEvent,
+        created.MaxEvents,
+        DateTime.UtcNow
+    );
+    activeSessions[memToken] = memSession;
+
+    return Results.Ok(new LoginResponse
+    {
+        Success = true,
+        Token = memToken,
+        Username = created.Username,
+        Role = "Member",
+        DisplayName = created.DisplayName,
+        Organization = created.Organization,
+        PlanType = created.PlanType,
+        ExpireAt = created.ExpireAt,
+        MaxGuestsPerEvent = created.MaxGuestsPerEvent,
+        MaxEvents = created.MaxEvents,
+        IsExpired = false,
+        RemainingDays = 30,
+        Message = "🎉 試用帳號申請成功！已為您開放 1 場活動與 30 人貴賓上限，後續可隨時升級為一般正式會員！"
     });
 });
 
@@ -670,11 +783,17 @@ app.MapPost("/api/auth/logout", (HttpContext ctx) =>
 
 // --- 2. Database Migration APIs (Admin Only) ---
 
-app.MapPost("/api/admin/migrate-from-zeabur", async (HttpContext ctx, IDbContextFactory<AppDbContext> factory, IConfiguration config) =>
+app.MapPost("/api/admin/migrate-from-zeabur", async (HttpContext ctx, IServiceProvider sp, IConfiguration config) =>
 {
     if (!CheckAdminAuth(ctx))
     {
         return Results.Unauthorized();
+    }
+
+    var factory = sp.GetService<IDbContextFactory<AppDbContext>>();
+    if (factory == null)
+    {
+        return Results.Problem("目前處於 InMemory 模式，未啟用 SQL 資料庫。");
     }
 
     try
@@ -691,11 +810,21 @@ app.MapPost("/api/admin/migrate-from-zeabur", async (HttpContext ctx, IDbContext
     }
 });
 
-app.MapGet("/api/admin/migration-status", async (HttpContext ctx, IDbContextFactory<AppDbContext> factory) =>
+app.MapGet("/api/admin/migration-status", async (HttpContext ctx, IServiceProvider sp) =>
 {
     if (!CheckAdminAuth(ctx))
     {
         return Results.Unauthorized();
+    }
+
+    var factory = sp.GetService<IDbContextFactory<AppDbContext>>();
+    if (factory == null)
+    {
+        return Results.Ok(new
+        {
+            mode = "InMemory",
+            message = "目前處於本機記憶體模式"
+        });
     }
 
     using var db = factory.CreateDbContext();
@@ -748,10 +877,12 @@ app.MapPost("/api/members", async (CreateMemberRequest req, HttpContext ctx, IEv
     }
 
     bool isAnnual = req.PlanType == "AnnualOrg";
-    string planType = isAnnual ? "AnnualOrg" : (string.IsNullOrWhiteSpace(req.PlanType) ? "SingleEvent_Light" : req.PlanType);
-    int defaultDays = isAnnual ? 365 : 7;
+    bool isTrial = req.PlanType == "Trial";
+    string planType = isAnnual ? "AnnualOrg" : (isTrial ? "Trial" : (string.IsNullOrWhiteSpace(req.PlanType) ? "SingleEvent_Light" : req.PlanType));
+    int defaultDays = isAnnual ? 365 : (isTrial ? 30 : 7);
     int defaultMaxGuests = planType switch
     {
+        "Trial" => 30,
         "SingleEvent_Light" => 100,
         "SingleEvent_Standard" => 300,
         "SingleEvent_Flagship" => 600,
@@ -828,6 +959,7 @@ app.MapPut("/api/members/{userId}", async (string userId, UpdateMemberRequest re
     {
         user.MaxGuestsPerEvent = req.PlanType switch
         {
+            "Trial" => 30,
             "SingleEvent_Light" => 100,
             "SingleEvent_Standard" => 300,
             "SingleEvent_Flagship" => 600,
@@ -1087,11 +1219,15 @@ async Task<IResult> HandleCreateEvent(CreateEventRequest? req, HttpContext ctx, 
             var currentEventCount = await service.GetUserEventCountAsync(session.Username);
             if (currentEventCount >= 1)
             {
+                string limitMsg = session.PlanType == "Trial"
+                    ? "⚠️ 您目前的「免費試用方案」已建立 1 場活動。試用方案開放新增場次 1 次（限額 30 人），如需建立更多場次，請洽管理員付費維護升級為一般會員！"
+                    : "⚠️ 您目前的「單場活動方案」僅授權建立 1 場活動。如需舉辦多場活動，請升級為「機構年度方案」以享有無限場次與範本複製功能！";
+
                 return Results.BadRequest(new
                 {
                     success = false,
                     error = "PLAN_LIMIT_REACHED",
-                    message = "⚠️ 您目前的「單場活動方案」僅授權建立 1 場活動。如需舉辦多場活動，請升級為「機構年度方案」以享有無限場次與範本複製功能！"
+                    message = limitMsg
                 });
             }
         }
@@ -1288,11 +1424,15 @@ app.MapPost("/api/events/{id}/guests", async (string id, Guest guest, HttpContex
 
         if (currentGuests.Count >= maxAllowed)
         {
+            string limitMsg = (session?.PlanType == "Trial")
+                ? $"⚠️ 已達試用方案單場人數上限 ({maxAllowed} 人)！試用帳號限額 30 位貴賓，後續付費後可維護升級為一般會員以解鎖更多人數！"
+                : $"⚠️ 已達此方案單場人數上限 ({maxAllowed} 人)！無法再新增貴賓。";
+
             return Results.BadRequest(new
             {
                 success = false,
                 error = "GUEST_LIMIT_EXCEEDED",
-                message = $"⚠️ 已達此方案單場人數上限 ({maxAllowed} 人)！無法再新增貴賓。"
+                message = limitMsg
             });
         }
 
@@ -1356,11 +1496,15 @@ app.MapPost("/api/events/{id}/guests/batch", async (string id, List<Guest> guest
 
     if (guests.Count > availableSlots)
     {
+        string limitMsg = (session?.PlanType == "Trial")
+            ? $"⚠️ 欲匯入 {guests.Count} 人，但試用方案單場上限為 {maxAllowed} 人（目前已登錄 {currentGuests.Count} 人，僅剩 {availableSlots} 個名額）！試用帳號限額 30 位貴賓，後續付費後可維護升級為一般會員以解鎖更多名額。"
+            : $"⚠️ 欲匯入 {guests.Count} 人，但此方案單場上限為 {maxAllowed} 人（目前已登錄 {currentGuests.Count} 人，僅剩 {availableSlots} 個名額）！";
+
         return Results.BadRequest(new
         {
             success = false,
             error = "GUEST_LIMIT_EXCEEDED",
-            message = $"⚠️ 欲匯入 {guests.Count} 人，但此方案單場上限為 {maxAllowed} 人（目前已登錄 {currentGuests.Count} 人，僅剩 {availableSlots} 個名額）！"
+            message = limitMsg
         });
     }
 
