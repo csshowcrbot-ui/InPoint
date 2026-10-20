@@ -336,9 +336,6 @@
           <button class="btn btn-add-guest" onclick="app.showAddGuestModal()" title="現場手動新增貴賓">
             <span>➕ 現場新增貴賓</span>
           </button>
-          <button class="btn btn-scanner-icon" onclick="app.openScannerModal()" title="開啟相機 QR 掃碼">
-            <span>📷 相機掃描</span>
-          </button>
         </div>
       </div>
 
@@ -746,29 +743,6 @@
     </div>
   </div>
 
-  <!-- 4. QR Code Camera Scanner Modal -->
-  <div class="modal-backdrop" id="qrScannerModal">
-    <div class="modal-dialog">
-      <div class="modal-header">
-        <div class="modal-title"><span>📷</span> 貴賓 QR Code 相機掃描報到</div>
-        <button class="modal-close-btn" onclick="app.closeScannerModal()">✕</button>
-      </div>
-      <div class="scanner-viewport-wrap">
-        <video id="scannerVideo" class="scanner-video" playsinline muted></video>
-        <div class="scanner-guide-frame"></div>
-        <div class="scanner-laser"></div>
-      </div>
-      <div id="scannerStatusText" style="font-size: 13px; color: var(--text-muted); text-align: center;">
-        請將貴賓手機或邀請函上的 QR 碼置於方框內進行識別
-      </div>
-      <div class="modal-footer" style="justify-content: space-between;">
-        <button class="btn btn-secondary" style="font-size: 12px;" onclick="app.simulateQuickScan()">
-          💡 模擬快速掃描第一筆
-        </button>
-        <button class="btn btn-primary" onclick="app.closeScannerModal()">關閉相機</button>
-      </div>
-    </div>
-  </div>
 
   <!-- 5. Add Guest Modal -->
   <div class="modal-backdrop" id="addGuestModal">
@@ -1482,9 +1456,9 @@
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
   <!-- Scripts (with Cache Buster) -->
-  <script src="js/qrcode-lib.js?v=20261020_trial2"></script>
-  <script src="js/audio.js?v=20261020_trial2"></script>
-  <script src="js/api.js?v=20261020_trial2"></script>
-  <script src="js/app.js?v=20261020_trial2"></script>
+  <script src="js/qrcode-lib.js?v=20261020_v3"></script>
+  <script src="js/audio.js?v=20261020_v3"></script>
+  <script src="js/api.js?v=20261020_v3"></script>
+  <script src="js/app.js?v=20261020_v3"></script>
 </body>
 </html>

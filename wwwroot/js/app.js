@@ -2964,52 +2964,17 @@ class CheckInApp {
         if (modal) modal.classList.remove('active');
     }
 
-    // Scanner
-    openScannerModal() {
-        const modal = document.getElementById('qrScannerModal');
-        if (modal) modal.classList.add('active');
-        this.startCamera();
-    }
-
-    closeScannerModal() {
-        const modal = document.getElementById('qrScannerModal');
-        if (modal) modal.classList.remove('active');
-        this.stopCamera();
-    }
-
-    async startCamera() {
-        const video = document.getElementById('scannerVideo');
-        if (!video) return;
-
-        try {
-            this.videoStream = await navigator.mediaDevices.getUserMedia({
-                video: { facingMode: 'environment' }
-            });
-            video.srcObject = this.videoStream;
-            video.setAttribute('playsinline', true);
-            video.play();
-        } catch (err) {
-            console.warn('Camera access error:', err);
-        }
-    }
-
+    // Scanner (已取消相機掃描功能，保留空函式避免異常)
+    openScannerModal() {}
+    closeScannerModal() { this.stopCamera(); }
+    async startCamera() {}
     stopCamera() {
         if (this.videoStream) {
-            this.videoStream.getTracks().forEach(track => track.stop());
+            try { this.videoStream.getTracks().forEach(track => track.stop()); } catch (e) {}
             this.videoStream = null;
         }
     }
-
-    simulateQuickScan() {
-        const pending = this.guests.find(g => !g.isCheckedIn);
-        if (pending) {
-            this.toggleCheckIn(pending.guestId, true);
-            this.closeScannerModal();
-            this.showToast(`📸 模擬掃描成功：【${this.maskName(pending.name)}】已完成報到！`, 'success');
-        } else {
-            alert('名單中已無未報到之貴賓！');
-        }
-    }
+    simulateQuickScan() {}
 
     // AI Assistant
     setAiPrompt(prompt) {
