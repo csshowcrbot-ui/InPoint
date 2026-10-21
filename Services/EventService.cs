@@ -45,6 +45,18 @@ public interface IEventService
     Task<List<Guest>> ParseRawGuestTextAsync(string eventId, string rawText);
     Task<string> ProcessAiQueryAsync(string eventId, string query);
     Task<object> GetStorageDiagnosticsAsync();
+
+    // Lottery Addon Module (現場抽獎附加功能 - NT$ 990 額外付費及授權)
+    Task<bool> HasLotteryAccessAsync(string? username, string eventId);
+    Task<bool> AuthorizeLotteryAddonAsync(string username, string? eventId);
+    Task<List<Guest>> GetEligibleLotteryGuestsAsync(string eventId, bool excludePreviousWinners = true);
+    Task<List<LotteryPrize>> GetLotteryPrizesAsync(string eventId);
+    Task<LotteryPrize> CreateLotteryPrizeAsync(LotteryPrize prize);
+    Task<bool> DeleteLotteryPrizeAsync(string eventId, string prizeId);
+    Task<List<LotteryWinner>> GetLotteryWinnersAsync(string eventId);
+    Task<List<LotteryWinner>> DrawLotteryAsync(string eventId, string prizeName, int quantity, bool excludePreviousWinners = true, string? prizeId = null);
+    Task<bool> RevokeLotteryWinnerAsync(string eventId, string winnerId);
+    Task<bool> ClearLotteryWinnersAsync(string eventId);
 }
 
 public class InMemoryEventService : IEventService
@@ -52,6 +64,8 @@ public class InMemoryEventService : IEventService
     private readonly ConcurrentDictionary<string, Event> _events = new();
     private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, Guest>> _guests = new();
     private readonly ConcurrentDictionary<string, User> _users = new();
+    private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, LotteryPrize>> _prizes = new();
+    private readonly ConcurrentDictionary<string, List<LotteryWinner>> _winners = new();
     private readonly List<string> _storageDirs = new();
     private readonly object _fileLock = new();
 
@@ -929,5 +943,202 @@ public class InMemoryEventService : IEventService
             guestsCount = _guests.Values.Sum(m => m.Count),
             usersCount = _users.Count
         });
+    }
+
+    // =========================================================================
+    // LOTTERY ADDON MODULE (現場抽獎附加功能實作 - InMemory)
+    // =========================================================================
+
+    public async Task<bool> HasLotteryAccessAsync(string? username, string eventId)
+    {
+        if (string.Equals(username, "admin", StringComparison.OrdinalIgnoreCase)) return true;
+
+        if (_events.TryGetValue(eventId, out var ev) && ev.HasLotteryAddon)
+        {
+            return true;
+        }
+
+        if (!string.IsNullOrWhiteSpace(username) && _users.TryGetValue(username, out var user))
+        {
+            if (user.Role == "Admin" || user.HasLotteryAddon) return true;
+        }
+
+        return false;
+    }
+
+    public async Task<bool> AuthorizeLotteryAddonAsync(string username, string? eventId)
+    {
+        if (!string.IsNullOrWhiteSpace(username) && _users.TryGetValue(username, out var user))
+        {
+            user.HasLotteryAddon = true;
+            user.LotteryAuthorizedAt = DateTime.UtcNow;
+        }
+
+        if (!string.IsNullOrWhiteSpace(eventId) && _events.TryGetValue(eventId, out var ev))
+        {
+            ev.HasLotteryAddon = true;
+        }
+
+        SaveDataToDisk();
+        return true;
+    }
+
+    public async Task<List<Guest>> GetEligibleLotteryGuestsAsync(string eventId, bool excludePreviousWinners = true)
+    {
+        var guests = await GetGuestsAsync(eventId);
+        // 嚴格只針對現場已完成報到名單
+        var checkedInGuests = guests.Where(g => g.IsCheckedIn).ToList();
+
+        if (excludePreviousWinners && _winners.TryGetValue(eventId, out var winnersList))
+        {
+            var activeWinnerGuestIds = winnersList
+                .Where(w => !w.IsRevoked)
+                .Select(w => w.GuestId)
+                .ToHashSet();
+
+            checkedInGuests = checkedInGuests.Where(g => !activeWinnerGuestIds.Contains(g.GuestId)).ToList();
+        }
+
+        return checkedInGuests;
+    }
+
+    public Task<List<LotteryPrize>> GetLotteryPrizesAsync(string eventId)
+    {
+        if (_prizes.TryGetValue(eventId, out var dict))
+        {
+            return Task.FromResult(dict.Values.OrderBy(p => p.DisplayOrder).ThenBy(p => p.CreatedAt).ToList());
+        }
+        return Task.FromResult(new List<LotteryPrize>());
+    }
+
+    public Task<LotteryPrize> CreateLotteryPrizeAsync(LotteryPrize prize)
+    {
+        if (string.IsNullOrWhiteSpace(prize.PrizeId))
+        {
+            prize.PrizeId = $"prize_{TaiwanTime.Now:yyyyMMdd_HHmmss}_{Guid.NewGuid().ToString("N")[..6]}";
+        }
+        prize.CreatedAt = DateTime.UtcNow;
+
+        var dict = _prizes.GetOrAdd(prize.EventId, _ => new ConcurrentDictionary<string, LotteryPrize>());
+        dict[prize.PrizeId] = prize;
+
+        SaveDataToDisk();
+        return Task.FromResult(prize);
+    }
+
+    public Task<bool> DeleteLotteryPrizeAsync(string eventId, string prizeId)
+    {
+        if (_prizes.TryGetValue(eventId, out var dict))
+        {
+            var removed = dict.TryRemove(prizeId, out _);
+            if (removed) SaveDataToDisk();
+            return Task.FromResult(removed);
+        }
+        return Task.FromResult(false);
+    }
+
+    public Task<List<LotteryWinner>> GetLotteryWinnersAsync(string eventId)
+    {
+        if (_winners.TryGetValue(eventId, out var list))
+        {
+            lock (list)
+            {
+                return Task.FromResult(list.OrderByDescending(w => w.WonAt).ToList());
+            }
+        }
+        return Task.FromResult(new List<LotteryWinner>());
+    }
+
+    public async Task<List<LotteryWinner>> DrawLotteryAsync(string eventId, string prizeName, int quantity, bool excludePreviousWinners = true, string? prizeId = null)
+    {
+        var eligibleGuests = await GetEligibleLotteryGuestsAsync(eventId, excludePreviousWinners);
+        if (eligibleGuests.Count == 0 || quantity <= 0)
+        {
+            return new List<LotteryWinner>();
+        }
+
+        var shuffled = eligibleGuests.OrderBy(_ => Random.Shared.Next()).ToList();
+        var selectedCount = Math.Min(quantity, shuffled.Count);
+        var chosenGuests = shuffled.Take(selectedCount).ToList();
+
+        var winnersList = _winners.GetOrAdd(eventId, _ => new List<LotteryWinner>());
+        var newWinners = new List<LotteryWinner>();
+
+        lock (winnersList)
+        {
+            foreach (var guest in chosenGuests)
+            {
+                var winner = new LotteryWinner
+                {
+                    WinnerId = $"win_{TaiwanTime.Now:yyyyMMdd_HHmmss}_{Guid.NewGuid().ToString("N")[..6]}",
+                    EventId = eventId,
+                    PrizeId = prizeId,
+                    PrizeName = prizeName,
+                    GuestId = guest.GuestId,
+                    GuestName = guest.Name,
+                    Organization = guest.Organization,
+                    Title = guest.Title,
+                    TableNo = guest.TableNo,
+                    WonAt = DateTime.UtcNow,
+                    IsRevoked = false
+                };
+                winnersList.Add(winner);
+                newWinners.Add(winner);
+            }
+        }
+
+        SaveDataToDisk();
+        return newWinners;
+    }
+
+    public Task<bool> RevokeLotteryWinnerAsync(string eventId, string winnerId)
+    {
+        if (string.IsNullOrWhiteSpace(winnerId)) return Task.FromResult(false);
+
+        // 1. 優先在指定 eventId 尋找
+        if (!string.IsNullOrWhiteSpace(eventId) && _winners.TryGetValue(eventId, out var list))
+        {
+            lock (list)
+            {
+                var w = list.FirstOrDefault(x => string.Equals(x.WinnerId, winnerId, StringComparison.OrdinalIgnoreCase));
+                if (w != null)
+                {
+                    w.IsRevoked = true;
+                    SaveDataToDisk();
+                    return Task.FromResult(true);
+                }
+            }
+        }
+
+        // 2. 容錯全域比對 winnerId
+        foreach (var kvp in _winners)
+        {
+            var l = kvp.Value;
+            lock (l)
+            {
+                var w = l.FirstOrDefault(x => string.Equals(x.WinnerId, winnerId, StringComparison.OrdinalIgnoreCase));
+                if (w != null)
+                {
+                    w.IsRevoked = true;
+                    SaveDataToDisk();
+                    return Task.FromResult(true);
+                }
+            }
+        }
+        return Task.FromResult(false);
+    }
+
+    public Task<bool> ClearLotteryWinnersAsync(string eventId)
+    {
+        if (_winners.TryGetValue(eventId, out var list))
+        {
+            lock (list)
+            {
+                list.Clear();
+            }
+            SaveDataToDisk();
+            return Task.FromResult(true);
+        }
+        return Task.FromResult(true);
     }
 }

@@ -118,6 +118,62 @@ if (useSql)
                             ALTER TABLE checkinguests ADD COLUMN ""CreatedAt"" TIMESTAMP NOT NULL DEFAULT NOW();
                         END IF;
                     END IF;
+                    -- 檢查並為 checkInEvents 新增抽獎欄位
+                    IF EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'checkInEvents') THEN
+                        IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name = 'checkInEvents' AND column_name = 'HasLotteryAddon') THEN
+                            ALTER TABLE ""checkInEvents"" ADD COLUMN ""HasLotteryAddon"" BOOLEAN NOT NULL DEFAULT FALSE;
+                        END IF;
+                    END IF;
+                    IF EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'checkinevents') THEN
+                        IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name = 'checkinevents' AND column_name = 'haslotteryaddon') THEN
+                            ALTER TABLE checkinevents ADD COLUMN haslotteryaddon BOOLEAN NOT NULL DEFAULT FALSE;
+                        END IF;
+                    END IF;
+
+                    -- 檢查並為 checkInUsers 新增抽獎授權欄位
+                    IF EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'checkInUsers') THEN
+                        IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name = 'checkInUsers' AND column_name = 'HasLotteryAddon') THEN
+                            ALTER TABLE ""checkInUsers"" ADD COLUMN ""HasLotteryAddon"" BOOLEAN NOT NULL DEFAULT FALSE;
+                        END IF;
+                        IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name = 'checkInUsers' AND column_name = 'LotteryAuthorizedAt') THEN
+                            ALTER TABLE ""checkInUsers"" ADD COLUMN ""LotteryAuthorizedAt"" TIMESTAMP NULL;
+                        END IF;
+                    END IF;
+                    IF EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'checkinusers') THEN
+                        IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name = 'checkinusers' AND column_name = 'haslotteryaddon') THEN
+                            ALTER TABLE checkinusers ADD COLUMN haslotteryaddon BOOLEAN NOT NULL DEFAULT FALSE;
+                        END IF;
+                        IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name = 'checkinusers' AND column_name = 'lotteryauthorizedat') THEN
+                            ALTER TABLE checkinusers ADD COLUMN lotteryauthorizedat TIMESTAMP NULL;
+                        END IF;
+                    END IF;
+
+                    -- 建立 checkInLotteryPrizes 獎項表
+                    CREATE TABLE IF NOT EXISTS ""checkInLotteryPrizes"" (
+                        ""PrizeId"" VARCHAR(100) NOT NULL PRIMARY KEY,
+                        ""EventId"" VARCHAR(100) NOT NULL,
+                        ""PrizeName"" VARCHAR(200) NOT NULL,
+                        ""Quantity"" INT NOT NULL DEFAULT 1,
+                        ""DisplayOrder"" INT NOT NULL DEFAULT 0,
+                        ""CreatedAt"" TIMESTAMP NOT NULL DEFAULT NOW()
+                    );
+                    CREATE INDEX IF NOT EXISTS ""IX_checkInLotteryPrizes_EventId"" ON ""checkInLotteryPrizes"" (""EventId"");
+
+                    -- 建立 checkInLotteryWinners 得獎者表
+                    CREATE TABLE IF NOT EXISTS ""checkInLotteryWinners"" (
+                        ""WinnerId"" VARCHAR(100) NOT NULL PRIMARY KEY,
+                        ""EventId"" VARCHAR(100) NOT NULL,
+                        ""PrizeId"" VARCHAR(100) NULL,
+                        ""PrizeName"" VARCHAR(200) NOT NULL,
+                        ""GuestId"" VARCHAR(100) NOT NULL,
+                        ""GuestName"" VARCHAR(100) NOT NULL,
+                        ""Organization"" VARCHAR(200) NULL,
+                        ""Title"" VARCHAR(100) NULL,
+                        ""TableNo"" VARCHAR(50) NULL,
+                        ""WonAt"" TIMESTAMP NOT NULL DEFAULT NOW(),
+                        ""IsRevoked"" BOOLEAN NOT NULL DEFAULT FALSE
+                    );
+                    CREATE INDEX IF NOT EXISTS ""IX_checkInLotteryWinners_EventId"" ON ""checkInLotteryWinners"" (""EventId"");
                 END $$;
 
                 -- 額外確保 checkInGuests 具備 CreatedAt 欄位 (原生語法雙重防護)
@@ -158,9 +214,21 @@ if (useSql)
                     [MaxEvents] INT NOT NULL DEFAULT 1,
                     [IsActive] BIT NOT NULL DEFAULT 1,
                     [CreatedAt] DATETIME2 NOT NULL DEFAULT GETUTCDATE(),
-                    [Notes] NVARCHAR(1000) NULL
+                    [Notes] NVARCHAR(1000) NULL,
+                    [HasLotteryAddon] BIT NOT NULL DEFAULT 0,
+                    [LotteryAuthorizedAt] DATETIME2 NULL
                 );
                 CREATE UNIQUE INDEX [IX_checkInUsers_Username] ON [checkInUsers]([Username]);
+            END
+
+            IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('checkInUsers') AND name = 'HasLotteryAddon')
+            BEGIN
+                ALTER TABLE [checkInUsers] ADD [HasLotteryAddon] BIT NOT NULL DEFAULT 0;
+            END
+
+            IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('checkInUsers') AND name = 'LotteryAuthorizedAt')
+            BEGIN
+                ALTER TABLE [checkInUsers] ADD [LotteryAuthorizedAt] DATETIME2 NULL;
             END
 
             IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('checkInEvents') AND name = 'OwnerUsername')
@@ -171,6 +239,42 @@ if (useSql)
             IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('checkInEvents') AND name = 'RankRules')
             BEGIN
                 ALTER TABLE [checkInEvents] ADD [RankRules] NVARCHAR(MAX) NULL;
+            END
+
+            IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('checkInEvents') AND name = 'HasLotteryAddon')
+            BEGIN
+                ALTER TABLE [checkInEvents] ADD [HasLotteryAddon] BIT NOT NULL DEFAULT 0;
+            END
+
+            IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'checkInLotteryPrizes')
+            BEGIN
+                CREATE TABLE [checkInLotteryPrizes] (
+                    [PrizeId] NVARCHAR(100) NOT NULL PRIMARY KEY,
+                    [EventId] NVARCHAR(100) NOT NULL,
+                    [PrizeName] NVARCHAR(200) NOT NULL,
+                    [Quantity] INT NOT NULL DEFAULT 1,
+                    [DisplayOrder] INT NOT NULL DEFAULT 0,
+                    [CreatedAt] DATETIME2 NOT NULL DEFAULT GETUTCDATE()
+                );
+                CREATE INDEX [IX_checkInLotteryPrizes_EventId] ON [checkInLotteryPrizes]([EventId]);
+            END
+
+            IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'checkInLotteryWinners')
+            BEGIN
+                CREATE TABLE [checkInLotteryWinners] (
+                    [WinnerId] NVARCHAR(100) NOT NULL PRIMARY KEY,
+                    [EventId] NVARCHAR(100) NOT NULL,
+                    [PrizeId] NVARCHAR(100) NULL,
+                    [PrizeName] NVARCHAR(200) NOT NULL,
+                    [GuestId] NVARCHAR(100) NOT NULL,
+                    [GuestName] NVARCHAR(100) NOT NULL,
+                    [Organization] NVARCHAR(200) NULL,
+                    [Title] NVARCHAR(100) NULL,
+                    [TableNo] NVARCHAR(50) NULL,
+                    [WonAt] DATETIME2 NOT NULL DEFAULT GETUTCDATE(),
+                    [IsRevoked] BIT NOT NULL DEFAULT 0
+                );
+                CREATE INDEX [IX_checkInLotteryWinners_EventId] ON [checkInLotteryWinners]([EventId]);
             END
             ";
 
@@ -398,7 +502,7 @@ UserSession? GetSessionFromContext(HttpContext ctx)
         // 伺服器重啟/重新部署後的無狀態 Session 自動復原機制
         if (token.StartsWith("adm_") || token.StartsWith("inpoint_adm_"))
         {
-            var adminSession = new UserSession("admin", "admin", "Admin", "系統最高管理員", "InPoint 核心管理中心", "Unlimited", null, 99999, -1, DateTime.UtcNow);
+            var adminSession = new UserSession("admin", "admin", "Admin", "系統最高管理員", "InPoint 核心管理中心", "Unlimited", null, 99999, -1, DateTime.UtcNow, true);
             activeSessions[token] = adminSession;
             return adminSession;
         }
@@ -444,7 +548,8 @@ UserSession? GetSessionFromContext(HttpContext ctx)
                         u.ExpireAt,
                         u.MaxGuestsPerEvent,
                         u.MaxEvents,
-                        DateTime.UtcNow
+                        DateTime.UtcNow,
+                        u.Role == "Admin" || u.HasLotteryAddon
                     );
                     activeSessions[token] = restoredSession;
                     return restoredSession;
@@ -515,7 +620,8 @@ app.MapPost("/api/auth/login", async (LoginRequest req, IEventService service) =
             null,
             99999,
             -1,
-            DateTime.UtcNow
+            DateTime.UtcNow,
+            true
         );
         activeSessions[token] = session;
 
@@ -533,6 +639,7 @@ app.MapPost("/api/auth/login", async (LoginRequest req, IEventService service) =
             MaxEvents = -1,
             IsExpired = false,
             RemainingDays = 9999,
+            HasLotteryAddon = true,
             Message = "🎉 管理者驗證成功，歡迎登入 InPoint 管理中心！"
         });
     }
@@ -617,7 +724,8 @@ app.MapPost("/api/auth/login", async (LoginRequest req, IEventService service) =
         user.ExpireAt,
         user.MaxGuestsPerEvent,
         user.MaxEvents,
-        DateTime.UtcNow
+        DateTime.UtcNow,
+        user.HasLotteryAddon
     );
     activeSessions[memToken] = memSession;
 
@@ -649,6 +757,7 @@ app.MapPost("/api/auth/login", async (LoginRequest req, IEventService service) =
         MaxEvents = user.MaxEvents,
         IsExpired = isExpired,
         RemainingDays = remainingDays,
+        HasLotteryAddon = user.HasLotteryAddon,
         Message = welcomeMsg
     });
 });
@@ -762,7 +871,8 @@ app.MapGet("/api/auth/me", (HttpContext ctx) =>
         maxGuestsPerEvent = session.MaxGuestsPerEvent,
         maxEvents = session.MaxEvents,
         isExpired,
-        remainingDays
+        remainingDays,
+        hasLotteryAddon = session.HasLotteryAddon
     });
 });
 
@@ -920,7 +1030,9 @@ app.MapPost("/api/members", async (CreateMemberRequest req, HttpContext ctx, IEv
         MaxEvents = maxEvents,
         IsActive = true,
         CreatedAt = DateTime.UtcNow,
-        Notes = req.Notes
+        Notes = req.Notes,
+        HasLotteryAddon = req.HasLotteryAddon,
+        LotteryAuthorizedAt = req.HasLotteryAddon ? DateTime.UtcNow : null
     };
 
     var created = await service.CreateUserAsync(newUser);
@@ -945,6 +1057,14 @@ app.MapPut("/api/members/{userId}", async (string userId, UpdateMemberRequest re
     user.PlanType = req.PlanType ?? user.PlanType;
     user.IsActive = req.IsActive;
     user.Notes = req.Notes;
+    if (req.HasLotteryAddon.HasValue)
+    {
+        user.HasLotteryAddon = req.HasLotteryAddon.Value;
+        if (user.HasLotteryAddon && user.LotteryAuthorizedAt == null)
+        {
+            user.LotteryAuthorizedAt = DateTime.UtcNow;
+        }
+    }
 
     if (req.ExpireAt.HasValue)
     {
@@ -1995,6 +2115,320 @@ app.MapPost("/api/events/{id}/self-checkin", async (string id, SelfCheckInReques
         guest = updated,
         message = $"🎉 自助報到成功！歡迎【{updated?.Organization}】{updated?.Title} {updated?.Name}，您的桌次為【{updated?.TableNo}】！"
     });
+});
+
+// =========================================================================
+// LOTTERY ADDON MODULE APIS (附加功能：現場抽獎 - 需額外付費及授權，費用 990)
+// =========================================================================
+
+// 1. 取得活動抽獎模組狀態 (授權資訊、已報到人數、合資格人數、獎項與中獎紀錄)
+app.MapGet("/api/lottery/status", async (string eventId, HttpContext ctx, IEventService service) =>
+{
+    var ev = await service.GetEventByIdAsync(eventId);
+    if (ev == null)
+    {
+        return Results.NotFound(new { success = false, message = "找不到該活動" });
+    }
+
+    var session = GetSessionFromContext(ctx);
+    var username = session?.Username ?? ev.OwnerUsername ?? "admin";
+    bool isAuthorized = session != null ? await service.HasLotteryAccessAsync(username, eventId) : true;
+
+    var guests = await service.GetGuestsAsync(eventId);
+    int totalCheckedIn = guests.Count(g => g.IsCheckedIn);
+
+    var eligible = await service.GetEligibleLotteryGuestsAsync(eventId, excludePreviousWinners: true);
+    var prizes = await service.GetLotteryPrizesAsync(eventId);
+    var winners = await service.GetLotteryWinnersAsync(eventId);
+
+    return Results.Ok(new LotteryStatusDto
+    {
+        IsAuthorized = isAuthorized,
+        Price = 990,
+        EventId = eventId,
+        TotalCheckedIn = totalCheckedIn,
+        TotalEligible = eligible.Count,
+        TotalWinners = winners.Count(w => !w.IsRevoked),
+        Prizes = prizes,
+        Winners = winners
+    });
+});
+
+// 2. 開通 / 購買抽獎附加功能授權 (費用 990)
+app.MapPost("/api/lottery/purchase", async (PurchaseLotteryRequest req, HttpContext ctx, IEventService service) =>
+{
+    var session = GetSessionFromContext(ctx);
+    if (session == null && !CheckAdminAuth(ctx))
+    {
+        return Results.Unauthorized();
+    }
+
+    var username = session?.Username ?? "admin";
+    var eventId = req.EventId;
+
+    if (!string.IsNullOrWhiteSpace(eventId))
+    {
+        var ev = await service.GetEventByIdAsync(eventId);
+        if (ev == null)
+        {
+            return Results.NotFound(new { success = false, message = "指定的活動不存在" });
+        }
+    }
+
+    // 執行開通授權
+    await service.AuthorizeLotteryAddonAsync(username, eventId);
+
+    // 同步更新記憶體中 activeSession
+    if (session != null)
+    {
+        var updatedSession = session with { HasLotteryAddon = true };
+        foreach (var kvp in activeSessions)
+        {
+            if (kvp.Value.UserId == session.UserId || kvp.Value.Username == session.Username)
+            {
+                activeSessions[kvp.Key] = updatedSession;
+            }
+        }
+    }
+
+    return Results.Ok(new
+    {
+        success = true,
+        isAuthorized = true,
+        price = 990,
+        message = "🎉 恭喜！現場抽獎附加功能（NT$ 990）已成功付費並開通授權，您已可享受完整大螢幕抽獎功能！"
+    });
+});
+
+// 3. 取得抽獎合資格名冊 (現場已報到人員)
+app.MapGet("/api/lottery/eligible-guests", async (string eventId, bool? excludePrevious, HttpContext ctx, IEventService service) =>
+{
+    var session = GetSessionFromContext(ctx);
+    if (session == null && !CheckAdminAuth(ctx))
+    {
+        return Results.Unauthorized();
+    }
+
+    var eligible = await service.GetEligibleLotteryGuestsAsync(eventId, excludePrevious ?? true);
+    return Results.Ok(eligible.Select(g => new
+    {
+        g.GuestId,
+        g.Name,
+        g.Organization,
+        g.Title,
+        g.TableNo,
+        g.Phone,
+        g.CheckedInAt
+    }));
+});
+
+// 4. 獎項管理 APIs (取得、新增、刪除)
+app.MapGet("/api/lottery/prizes", async (string eventId, HttpContext ctx, IEventService service) =>
+{
+    var session = GetSessionFromContext(ctx);
+    if (session == null && !CheckAdminAuth(ctx))
+    {
+        return Results.Unauthorized();
+    }
+
+    var prizes = await service.GetLotteryPrizesAsync(eventId);
+    return Results.Ok(prizes);
+});
+
+app.MapPost("/api/lottery/prizes", async (CreatePrizeRequest req, HttpContext ctx, IEventService service) =>
+{
+    var session = GetSessionFromContext(ctx);
+    if (session == null && !CheckAdminAuth(ctx))
+    {
+        return Results.Unauthorized();
+    }
+
+    if (string.IsNullOrWhiteSpace(req.PrizeName) || req.Quantity <= 0)
+    {
+        return Results.BadRequest(new { success = false, message = "請填寫獎項名稱與數量（至少1人）" });
+    }
+
+    var prize = new LotteryPrize
+    {
+        EventId = req.EventId,
+        PrizeName = req.PrizeName.Trim(),
+        Quantity = req.Quantity
+    };
+
+    var created = await service.CreateLotteryPrizeAsync(prize);
+    return Results.Ok(created);
+});
+
+app.MapDelete("/api/lottery/prizes/{prizeId}", async (string prizeId, string eventId, HttpContext ctx, IEventService service) =>
+{
+    if (string.IsNullOrWhiteSpace(eventId))
+    {
+        return Results.BadRequest(new { success = false, message = "需提供 eventId" });
+    }
+
+    var session = GetSessionFromContext(ctx);
+    if (session == null && !CheckAdminAuth(ctx))
+    {
+        return Results.Unauthorized();
+    }
+
+    var success = await service.DeleteLotteryPrizeAsync(eventId, prizeId);
+    return success ? Results.Ok(new { success = true }) : Results.NotFound(new { message = "獎項不存在" });
+});
+
+// 5. 取得目前已中獎名單
+app.MapGet("/api/lottery/winners", async (string eventId, HttpContext ctx, IEventService service) =>
+{
+    var winners = await service.GetLotteryWinnersAsync(eventId);
+    return Results.Ok(winners);
+});
+
+// 6. 後台觸發大螢幕開始滾動 (抽動畫面啟動廣播)
+app.MapPost("/api/lottery/spin-start", async (DrawLotteryRequest req, HttpContext ctx, IEventService service, IHubContext<CheckInHub> hubContext) =>
+{
+    var session = GetSessionFromContext(ctx);
+    if (session == null && !CheckAdminAuth(ctx))
+    {
+        return Results.Unauthorized();
+    }
+
+    var username = session?.Username ?? "admin";
+    bool isAuthorized = await service.HasLotteryAccessAsync(username, req.EventId);
+    if (!isAuthorized)
+    {
+        return Results.Json(new { success = false, message = "⚠️ 抽獎功能需額外付費及授權（NT$ 990），請先於後台開通後使用！" }, statusCode: 403);
+    }
+
+    var eligible = await service.GetEligibleLotteryGuestsAsync(req.EventId, req.ExcludePreviousWinners);
+    if (eligible.Count == 0)
+    {
+        return Results.BadRequest(new { success = false, message = "⚠️ 目前現場無符合抽獎資格的已報到人員！" });
+    }
+
+    // 發送即時廣播給大螢幕
+    await hubContext.Clients.Group(req.EventId).SendAsync("OnLotterySpinStarted", new
+    {
+        eventId = req.EventId,
+        prizeName = req.PrizeName,
+        quantity = req.Quantity,
+        eligibleCount = eligible.Count,
+        sampleCandidates = eligible.OrderBy(_ => Random.Shared.Next()).Take(25).Select(g => new { g.Name, g.Organization, g.Title, g.TableNo }).ToList(),
+        timestamp = TaiwanTime.Now
+    });
+
+    return Results.Ok(new { success = true, eligibleCount = eligible.Count });
+});
+
+// 7. 執行抽獎並產出得獎名單 (後台執行，大螢幕同步揭曉得獎結果)
+app.MapPost("/api/lottery/draw", async (DrawLotteryRequest req, HttpContext ctx, IEventService service, IHubContext<CheckInHub> hubContext) =>
+{
+    var session = GetSessionFromContext(ctx);
+    if (session == null && !CheckAdminAuth(ctx))
+    {
+        return Results.Unauthorized();
+    }
+
+    var username = session?.Username ?? "admin";
+    bool isAuthorized = await service.HasLotteryAccessAsync(username, req.EventId);
+    if (!isAuthorized)
+    {
+        return Results.Json(new { success = false, message = "⚠️ 抽獎功能需額外付費及授權（NT$ 990），請先於後台開通後使用！" }, statusCode: 403);
+    }
+
+    if (string.IsNullOrWhiteSpace(req.PrizeName) || req.Quantity <= 0)
+    {
+        return Results.BadRequest(new { success = false, message = "請指定獎項名稱與抽取數量" });
+    }
+
+    var eligible = await service.GetEligibleLotteryGuestsAsync(req.EventId, req.ExcludePreviousWinners);
+    if (eligible.Count == 0)
+    {
+        return Results.BadRequest(new { success = false, message = "⚠️ 目前現場無符合抽獎資格的已報到人員（可能已全部中獎或尚未有人簽到）！" });
+    }
+
+    var winners = await service.DrawLotteryAsync(req.EventId, req.PrizeName.Trim(), req.Quantity, req.ExcludePreviousWinners, req.PrizeId);
+
+    // 透過 SignalR 廣播給該場次大螢幕
+    await hubContext.Clients.Group(req.EventId).SendAsync("OnLotteryDrawn", new
+    {
+        eventId = req.EventId,
+        prizeName = req.PrizeName.Trim(),
+        quantity = winners.Count,
+        winners = winners,
+        timestamp = TaiwanTime.Now
+    });
+
+    return Results.Ok(new
+    {
+        success = true,
+        prizeName = req.PrizeName.Trim(),
+        count = winners.Count,
+        winners = winners
+    });
+});
+
+// 8. 廢棄 / 棄權重抽 (若得獎者不在現場)
+app.MapPost("/api/lottery/revoke", async (RevokeWinnerRequest req, HttpContext ctx, IEventService service, IHubContext<CheckInHub> hubContext) =>
+{
+    var session = GetSessionFromContext(ctx);
+    if (session == null && !CheckAdminAuth(ctx))
+    {
+        return Results.Unauthorized();
+    }
+
+    var success = await service.RevokeLotteryWinnerAsync(req.EventId, req.WinnerId);
+    if (success)
+    {
+        await hubContext.Clients.Group(req.EventId).SendAsync("OnLotteryWinnerRevoked", new
+        {
+            eventId = req.EventId,
+            winnerId = req.WinnerId,
+            timestamp = TaiwanTime.Now
+        });
+        return Results.Ok(new { success = true, message = "已將該得獎名額標記為棄權，資格已釋回已報到名單！" });
+    }
+    return Results.NotFound(new { success = false, message = "找不到該筆中獎紀錄" });
+});
+
+// 9. 清空抽獎中獎紀錄
+app.MapPost("/api/lottery/clear", async (DrawLotteryRequest req, HttpContext ctx, IEventService service, IHubContext<CheckInHub> hubContext) =>
+{
+    var session = GetSessionFromContext(ctx);
+    if (session == null && !CheckAdminAuth(ctx))
+    {
+        return Results.Unauthorized();
+    }
+
+    await service.ClearLotteryWinnersAsync(req.EventId);
+    await hubContext.Clients.Group(req.EventId).SendAsync("OnLotteryReset", new
+    {
+        eventId = req.EventId,
+        timestamp = TaiwanTime.Now
+    });
+
+    return Results.Ok(new { success = true, message = "已清空本次活動所有中獎名冊！" });
+});
+
+// 10. 匯出中獎名單 CSV
+app.MapGet("/api/lottery/export", async (string eventId, HttpContext ctx, IEventService service) =>
+{
+    var ev = await service.GetEventByIdAsync(eventId);
+    var eventName = ev?.EventName ?? "未命名活動";
+    var winners = await service.GetLotteryWinnersAsync(eventId);
+
+    var sb = new System.Text.StringBuilder();
+    sb.AppendLine("序號,獎項名稱,貴賓姓名,所屬單位,職稱,桌號組別,員工卡號,中獎時間,狀態");
+
+    int idx = 1;
+    foreach (var w in winners.OrderBy(w => w.PrizeName).ThenBy(w => w.WonAt))
+    {
+        var status = w.IsRevoked ? "已棄權/廢棄" : "有效中獎";
+        sb.AppendLine($"{idx++},\"{w.PrizeName}\",\"{w.GuestName}\",\"{w.Organization}\",\"{w.Title}\",\"{w.TableNo}\",\"{w.GuestId}\",\"{w.WonAt.ToTaiwanTimeString("yyyy/MM/dd HH:mm:ss")}\",\"{status}\"");
+    }
+
+    var bytes = System.Text.Encoding.UTF8.GetPreamble().Concat(System.Text.Encoding.UTF8.GetBytes(sb.ToString())).ToArray();
+    var fileName = $"中獎名冊_{eventName}_{TaiwanTime.Now:yyyyMMdd_HHmmss}.csv";
+    return Results.File(bytes, "text/csv; charset=utf-8", fileName);
 });
 
 app.Run();

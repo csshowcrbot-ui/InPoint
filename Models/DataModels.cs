@@ -14,6 +14,10 @@ public class Event
     /// 自訂職級權重尊榮排序規則 (JSON，可針對每個活動自行定義 Rank 1 ~ Rank 4 關鍵字與標籤)
     /// </summary>
     public string? RankRules { get; set; }
+    /// <summary>
+    /// 是否已開通抽獎附加功能 (額外付費 990 授權)
+    /// </summary>
+    public bool HasLotteryAddon { get; set; } = false;
 }
 
 public class Guest
@@ -58,6 +62,11 @@ public class User
     public bool IsActive { get; set; } = true;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public string? Notes { get; set; }
+    /// <summary>
+    /// 是否已開通抽獎附加功能 (額外付費 990 授權)
+    /// </summary>
+    public bool HasLotteryAddon { get; set; } = false;
+    public DateTime? LotteryAuthorizedAt { get; set; }
 }
 
 public record UserSession(
@@ -70,7 +79,8 @@ public record UserSession(
     DateTime? ExpireAt,
     int MaxGuestsPerEvent,
     int MaxEvents,
-    DateTime LoggedInAt
+    DateTime LoggedInAt,
+    bool HasLotteryAddon = false
 );
 
 public class MemberDto
@@ -90,6 +100,7 @@ public class MemberDto
     public int EventCount { get; set; } = 0;
     public bool IsExpired => ExpireAt.HasValue && ExpireAt.Value < DateTime.UtcNow;
     public int RemainingDays => ExpireAt.HasValue ? (int)Math.Max(0, (ExpireAt.Value - DateTime.UtcNow).TotalDays) : 9999;
+    public bool HasLotteryAddon { get; set; } = false;
 }
 
 public class CreateMemberRequest
@@ -103,6 +114,7 @@ public class CreateMemberRequest
     public int? ExpireDays { get; set; }
     public int? MaxGuestsPerEvent { get; set; }
     public string? Notes { get; set; }
+    public bool HasLotteryAddon { get; set; } = false;
 }
 
 public class TrialRegisterRequest
@@ -126,6 +138,7 @@ public class UpdateMemberRequest
     public bool IsActive { get; set; } = true;
     public string? Password { get; set; }
     public string? Notes { get; set; }
+    public bool? HasLotteryAddon { get; set; }
 }
 
 public class ResetMemberPasswordRequest
@@ -209,6 +222,7 @@ public class LoginResponse
     public int MaxEvents { get; set; } = 1;
     public bool IsExpired { get; set; } = false;
     public int RemainingDays { get; set; } = 0;
+    public bool HasLotteryAddon { get; set; } = false;
     public string? Message { get; set; }
 }
 
@@ -254,5 +268,75 @@ public class UpdateRankRulesRequest
 public class UpdateGuestRankRequest
 {
     public int RankWeight { get; set; } = 3;
+}
+
+// =========================================================================
+// LOTTERY ADDON MODULE (附加功能：現場抽獎 - NT$ 990 付費授權)
+// =========================================================================
+
+public class LotteryPrize
+{
+    public string PrizeId { get; set; } = string.Empty;
+    public string EventId { get; set; } = string.Empty;
+    public string PrizeName { get; set; } = string.Empty;
+    public int Quantity { get; set; } = 1;
+    public int DisplayOrder { get; set; } = 0;
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+}
+
+public class LotteryWinner
+{
+    public string WinnerId { get; set; } = string.Empty;
+    public string EventId { get; set; } = string.Empty;
+    public string? PrizeId { get; set; }
+    public string PrizeName { get; set; } = string.Empty;
+    public string GuestId { get; set; } = string.Empty;
+    public string GuestName { get; set; } = string.Empty;
+    public string Organization { get; set; } = string.Empty;
+    public string Title { get; set; } = string.Empty;
+    public string TableNo { get; set; } = string.Empty;
+    public DateTime WonAt { get; set; } = DateTime.UtcNow;
+    public bool IsRevoked { get; set; } = false;
+}
+
+public class CreatePrizeRequest
+{
+    public string EventId { get; set; } = string.Empty;
+    public string PrizeName { get; set; } = string.Empty;
+    public int Quantity { get; set; } = 1;
+}
+
+public class DrawLotteryRequest
+{
+    public string EventId { get; set; } = string.Empty;
+    public string? PrizeId { get; set; }
+    public string PrizeName { get; set; } = string.Empty;
+    public int Quantity { get; set; } = 1;
+    public bool ExcludePreviousWinners { get; set; } = true;
+}
+
+public class RevokeWinnerRequest
+{
+    public string EventId { get; set; } = string.Empty;
+    public string WinnerId { get; set; } = string.Empty;
+}
+
+public class PurchaseLotteryRequest
+{
+    public string? EventId { get; set; }
+    public string? PaymentMethod { get; set; } = "OnlineCreditCard"; // 模擬線上付款
+    public int Amount { get; set; } = 990;
+}
+
+public class LotteryStatusDto
+{
+    public bool IsAuthorized { get; set; } = false;
+    public int Price { get; set; } = 990;
+    public string EventId { get; set; } = string.Empty;
+    public int TotalCheckedIn { get; set; } = 0;
+    public int TotalEligible { get; set; } = 0;
+    public int TotalWinners { get; set; } = 0;
+    public List<LotteryPrize> Prizes { get; set; } = new();
+    public List<LotteryWinner> Winners { get; set; } = new();
 }
 

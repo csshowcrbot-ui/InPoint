@@ -12,6 +12,8 @@ public class AppDbContext : DbContext
     public DbSet<Event> Events => Set<Event>();
     public DbSet<Guest> Guests => Set<Guest>();
     public DbSet<User> Users => Set<User>();
+    public DbSet<LotteryPrize> LotteryPrizes => Set<LotteryPrize>();
+    public DbSet<LotteryWinner> LotteryWinners => Set<LotteryWinner>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -28,6 +30,7 @@ public class AppDbContext : DbContext
             entity.Property(e => e.Description).HasMaxLength(1000);
             entity.Property(e => e.OwnerUsername).HasMaxLength(100);
             entity.Property(e => e.RankRules);
+            entity.Property(e => e.HasLotteryAddon);
         });
 
         // Guest Entity -> checkInGuests (Composite Key: EventId + GuestId to support multi-event guest IDs)
@@ -63,8 +66,43 @@ public class AppDbContext : DbContext
             entity.Property(u => u.Organization).HasMaxLength(200);
             entity.Property(u => u.PlanType).HasMaxLength(50);
             entity.Property(u => u.Notes).HasMaxLength(1000);
+            entity.Property(u => u.HasLotteryAddon);
+            entity.Property(u => u.LotteryAuthorizedAt);
 
             entity.HasIndex(u => u.Username).IsUnique();
+        });
+
+        // LotteryPrize Entity -> checkInLotteryPrizes
+        modelBuilder.Entity<LotteryPrize>(entity =>
+        {
+            entity.ToTable("checkInLotteryPrizes");
+            entity.HasKey(p => p.PrizeId);
+            entity.Property(p => p.PrizeId).HasMaxLength(100);
+            entity.Property(p => p.EventId).HasMaxLength(100).IsRequired();
+            entity.Property(p => p.PrizeName).HasMaxLength(200).IsRequired();
+            entity.Property(p => p.Quantity).IsRequired();
+            entity.Property(p => p.DisplayOrder).IsRequired();
+
+            entity.HasIndex(p => p.EventId);
+        });
+
+        // LotteryWinner Entity -> checkInLotteryWinners
+        modelBuilder.Entity<LotteryWinner>(entity =>
+        {
+            entity.ToTable("checkInLotteryWinners");
+            entity.HasKey(w => w.WinnerId);
+            entity.Property(w => w.WinnerId).HasMaxLength(100);
+            entity.Property(w => w.EventId).HasMaxLength(100).IsRequired();
+            entity.Property(w => w.PrizeId).HasMaxLength(100);
+            entity.Property(w => w.PrizeName).HasMaxLength(200).IsRequired();
+            entity.Property(w => w.GuestId).HasMaxLength(100).IsRequired();
+            entity.Property(w => w.GuestName).HasMaxLength(100).IsRequired();
+            entity.Property(w => w.Organization).HasMaxLength(200);
+            entity.Property(w => w.Title).HasMaxLength(100);
+            entity.Property(w => w.TableNo).HasMaxLength(50);
+
+            entity.HasIndex(w => w.EventId);
+            entity.HasIndex(w => new { w.EventId, w.GuestId });
         });
     }
 

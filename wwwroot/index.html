@@ -230,6 +230,10 @@
           <button class="nav-tab-btn" data-tab="admin" role="tab">
             <span>📁 名冊與匯出</span>
           </button>
+          <button class="nav-tab-btn" data-tab="lottery" id="navTabLottery" role="tab">
+            <span>🎁 現場抽獎</span>
+            <span class="badge-pill" style="background: #E67E22; color: #fff;">新功能</span>
+          </button>
           <button class="nav-tab-btn" data-tab="ai" id="navTabAi" role="tab">
             <span>🤖 AI 智慧助手</span>
           </button>
@@ -526,6 +530,201 @@
     </section>
 
     <!-- ========================================================================= -->
+    <!-- VIEW 3.5: LIVE LOTTERY ADDON MODULE (附加功能：現場抽獎 - NT$ 990 授權)      -->
+    <!-- ========================================================================= -->
+    <section class="tab-view" id="lotteryView">
+      <div class="lottery-mgmt-container" style="display: flex; flex-direction: column; gap: 20px;">
+
+        <!-- 1. LOCKED VIEW (未付費/未授權時顯示) -->
+        <div id="lotteryLockedCard" style="display: none; background: linear-gradient(135deg, #0d3023 0%, #061912 100%); border: 2px solid #C89B3C; border-radius: 20px; padding: 40px 32px; color: #fff; text-align: center; box-shadow: 0 16px 40px rgba(0,0,0,0.25); position: relative; overflow: hidden;">
+          <div style="position: absolute; right: -40px; top: -40px; width: 220px; height: 220px; background: radial-gradient(circle, rgba(200,155,60,0.25) 0%, transparent 70%); border-radius: 50%;"></div>
+          
+          <div style="font-size: 54px; margin-bottom: 12px; filter: drop-shadow(0 4px 12px rgba(255,215,0,0.4));">🎁</div>
+          <div style="display: inline-block; background: linear-gradient(135deg, #FFD700, #F39C12); color: #0f2b1d; font-size: 13px; font-weight: 900; padding: 4px 16px; border-radius: 20px; letter-spacing: 1px; margin-bottom: 14px;">
+            VIP MEMBER ADDON · 進階會員附加模組
+          </div>
+          <h2 style="font-size: 28px; font-weight: 900; letter-spacing: 1px; color: #FFFFFF; margin-bottom: 12px;">
+            InPoint 智慧現場大抽獎系統
+          </h2>
+          <p style="font-size: 15px; color: #BDE4D2; max-width: 680px; margin: 0 auto 28px auto; line-height: 1.6;">
+            專為尾牙年會、週年高峰會、論壇晚宴打造！<strong>100% 針對現場「已完成報到」名單公平抽選</strong>，支援後台即時指派獎項與名額，並在獨立網頁大螢幕同步播放震撼吃角子老虎抽動畫面與得獎揭曉！
+          </p>
+
+          <!-- 4 Pillars Grid -->
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; max-width: 900px; margin: 0 auto 32px auto; text-align: left;">
+            <div style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); border-radius: 14px; padding: 16px;">
+              <div style="font-size: 20px; margin-bottom: 6px;">🎯</div>
+              <div style="font-weight: 800; color: #FFD700; font-size: 14px; margin-bottom: 4px;">嚴格已報到抽獎池</div>
+              <div style="font-size: 12px; color: #A3D4BE; line-height: 1.5;">徹底杜絕未到場代簽或空抽，即時過濾已簽到人員，保障現場公平性。</div>
+            </div>
+
+            <div style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); border-radius: 14px; padding: 16px;">
+              <div style="font-size: 20px; margin-bottom: 6px;">📺</div>
+              <div style="font-weight: 800; color: #FFD700; font-size: 14px; margin-bottom: 4px;">舞台專屬大螢幕連動</div>
+              <div style="font-size: 12px; color: #A3D4BE; line-height: 1.5;">後台點擊抽獎，舞台大螢幕（lottery.html）秒級同步高速抽動與金光彩帶揭曉！</div>
+            </div>
+
+            <div style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); border-radius: 14px; padding: 16px;">
+              <div style="font-size: 20px; margin-bottom: 6px;">🔢</div>
+              <div style="font-weight: 800; color: #FFD700; font-size: 14px; margin-bottom: 4px;">自由指派獎項與名額</div>
+              <div style="font-size: 12px; color: #A3D4BE; line-height: 1.5;">可設定特獎、頭獎或普獎，一次抽取 1~10 人，自動排除已中獎者防止重複。</div>
+            </div>
+
+            <div style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); border-radius: 14px; padding: 16px;">
+              <div style="font-size: 20px; margin-bottom: 6px;">🔄</div>
+              <div style="font-weight: 800; color: #FFD700; font-size: 14px; margin-bottom: 4px;">棄權重抽與名冊匯出</div>
+              <div style="font-size: 12px; color: #A3D4BE; line-height: 1.5;">得獎者若不在現場可一鍵棄權重抽，活動結束即刻一鍵匯出完整中獎 CSV。</div>
+            </div>
+          </div>
+
+          <!-- Price & Action Banner -->
+          <div style="background: rgba(0,0,0,0.3); border: 1px dashed rgba(255,215,0,0.5); border-radius: 16px; padding: 20px 24px; max-width: 520px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;">
+            <div style="text-align: left;">
+              <div style="font-size: 12px; color: #A3D4BE;">附加模組加購特惠價</div>
+              <div style="font-size: 28px; font-weight: 900; color: #FFD700;">
+                NT$ 990 <span style="font-size: 14px; color: #A3D4BE; font-weight: 500;">/ 單場無限次抽獎</span>
+              </div>
+            </div>
+            <button type="button" class="btn btn-primary" onclick="app.showPurchaseLotteryModal()" style="padding: 12px 28px; font-size: 15px; font-weight: 900; background: linear-gradient(135deg, #F59E0B, #D97706); border-color: #F59E0B; box-shadow: 0 4px 18px rgba(245,158,11,0.4); border-radius: 30px;">
+              🚀 立即付費開通 (NT$ 990)
+            </button>
+          </div>
+        </div>
+
+        <!-- 2. UNLOCKED VIEW (已開通授權時顯示) -->
+        <div id="lotteryUnlockedPanel" style="display: none; flex-direction: column; gap: 20px;">
+
+          <!-- Top Status Strip -->
+          <div class="card" style="padding: 16px 24px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; background: #FFFFFF; border-left: 5px solid #059669;">
+            <div style="display: flex; align-items: center; gap: 16px;">
+              <div style="width: 44px; height: 44px; background: #ECFDF5; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 22px;">🎁</div>
+              <div>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                  <h3 style="font-size: 16px; font-weight: 800; color: var(--text-charcoal); margin: 0;">現場抽獎控制後台</h3>
+                  <span class="badge-pill" style="background: #10B981; color: #fff; font-size: 11px;">✓ 已授權 (NT$ 990)</span>
+                </div>
+                <div style="font-size: 12.5px; color: var(--text-muted); margin-top: 3px;">
+                  現場已報到抽獎母體池：<strong id="lotteryCheckedInCount" style="color: #059669;">0</strong> 人 ‧ 目前合資格抽獎：<strong id="lotteryEligibleCount" style="color: #2563EB;">0</strong> 人 ‧ 已累計得獎：<strong id="lotteryWinnerCount" style="color: #D97706;">0</strong> 人
+                </div>
+              </div>
+            </div>
+
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <button type="button" class="btn btn-secondary" onclick="app.copyLotteryScreenUrl()" title="複製抽獎大螢幕展示網址供大會音控投影">
+                <span>📋 複製大螢幕網址</span>
+              </button>
+              <button type="button" class="btn btn-primary" onclick="app.openLotteryBigScreen()" style="background: linear-gradient(135deg, #1A5E42, #059669); box-shadow: 0 4px 12px rgba(5,150,105,0.25);">
+                <span>📺 開啟抽獎大螢幕展示頁 ↗</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Main Control Grid: Left Form, Right History -->
+          <div style="display: grid; grid-template-columns: 1fr 1.3fr; gap: 20px;">
+
+            <!-- Left: Draw Controller Card -->
+            <div class="card" style="padding: 24px;">
+              <h4 style="font-size: 15px; font-weight: 800; color: var(--text-charcoal); margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">
+                <span>⚡</span> 快速抽獎控制台
+              </h4>
+
+              <form id="lotteryDrawForm" onsubmit="app.handleExecuteDraw(event)">
+                <!-- Prize Name Input & Presets -->
+                <div class="form-group" style="margin-bottom: 14px;">
+                  <label class="form-label" style="font-weight: 700;">抽取的獎項名稱 <span style="font-size: 12px; font-weight: normal; color: var(--text-muted);">(留空一鍵開獎自動呈現)</span></label>
+                  <input type="text" id="drawPrizeName" class="form-control" placeholder="例：特獎、頭獎（若留空將自動以「現場幸運大獎」震撼開獎）" />
+                  
+                  <!-- Quick Preset Chips -->
+                  <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px;">
+                    <button type="button" class="btn-chip-preset" onclick="app.setLotteryPrizePreset('特獎')">🏆 特獎</button>
+                    <button type="button" class="btn-chip-preset" onclick="app.setLotteryPrizePreset('頭獎')">🥇 頭獎</button>
+                    <button type="button" class="btn-chip-preset" onclick="app.setLotteryPrizePreset('二獎')">🥈 二獎</button>
+                    <button type="button" class="btn-chip-preset" onclick="app.setLotteryPrizePreset('三獎')">🥉 三獎</button>
+                    <button type="button" class="btn-chip-preset" onclick="app.setLotteryPrizePreset('普獎')">🎁 普獎</button>
+                    <button type="button" class="btn-chip-preset" onclick="app.setLotteryPrizePreset('加碼特別獎')">🧧 加碼特別獎</button>
+                  </div>
+                </div>
+
+                <!-- Quantity & Options Row -->
+                <div class="form-row" style="margin-bottom: 16px;">
+                  <div class="form-group" style="flex: 1;">
+                    <label class="form-label" style="font-weight: 700;">抽取名額 (數量) *</label>
+                    <input type="number" id="drawQuantity" class="form-control" min="1" max="100" value="1" required />
+                  </div>
+                  <div class="form-group" style="flex: 1.5; justify-content: flex-end;">
+                    <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; color: #1E293B; cursor: pointer; padding: 10px 0;">
+                      <input type="checkbox" id="drawExcludePrevious" checked style="width: 17px; height: 17px;" />
+                      <span>排除已中獎者 (防止重複中獎)</span>
+                    </label>
+                  </div>
+                </div>
+
+                <!-- Action Buttons Cluster -->
+                <div style="display: flex; flex-direction: column; gap: 10px;">
+                  <!-- Main 1-Click Action -->
+                  <button type="submit" class="btn btn-primary" id="btnOneClickDraw" style="width: 100%; padding: 14px; font-size: 16px; font-weight: 800; justify-content: center; background: linear-gradient(135deg, #F59E0B, #D97706); border-color: #F59E0B; box-shadow: 0 4px 16px rgba(245,158,11,0.35);">
+                    🌟 一鍵開獎 (大螢幕自動滾動 4 秒後揭曉)
+                  </button>
+
+                  <!-- Manual Spin / Stop Dual Buttons -->
+                  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <button type="button" class="btn btn-secondary" onclick="app.handleManualSpinStart()" title="讓大螢幕持續高速抽動旋轉，帶動現場氣氛">
+                      ⚡ 啟動大螢幕滾動
+                    </button>
+                    <button type="button" class="btn btn-danger" onclick="app.handleManualStopDraw()" title="讓大螢幕定格開獎">
+                      🛑 立即定格揭曉
+                    </button>
+                  </div>
+                </div>
+              </form>
+            </div>
+
+            <!-- Right: Winner History & Management Table -->
+            <div class="card" style="padding: 24px; display: flex; flex-direction: column;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+                <div>
+                  <h4 style="font-size: 15px; font-weight: 800; color: var(--text-charcoal); margin: 0;">
+                    🏆 本場次已中獎名冊
+                  </h4>
+                  <span style="font-size: 12px; color: var(--text-muted);">即時連動大螢幕，支援現場不在席一鍵棄權重抽</span>
+                </div>
+                <div style="display: flex; gap: 8px;">
+                  <button type="button" class="btn btn-secondary" style="font-size: 12px; padding: 6px 12px;" onclick="app.exportLotteryCsv()">
+                    <span>📥 匯出得獎 CSV</span>
+                  </button>
+                  <button type="button" class="btn btn-danger" style="font-size: 12px; padding: 6px 10px;" onclick="app.confirmClearLotteryWinners()">
+                    <span>🗑️ 清空紀錄</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Winners Table Container -->
+              <div style="flex: 1; max-height: 380px; overflow-y: auto; border: 1px solid var(--border-light); border-radius: 10px;">
+                <table class="member-table" style="font-size: 13px;">
+                  <thead style="position: sticky; top: 0; background: #F8FAFC; z-index: 1;">
+                    <tr>
+                      <th style="padding: 8px 10px;">獎項</th>
+                      <th style="padding: 8px 10px;">中獎人姓名</th>
+                      <th style="padding: 8px 10px;">單位 / 職稱</th>
+                      <th style="padding: 8px 10px;">安排席位</th>
+                      <th style="padding: 8px 10px; text-align: center;">操作</th>
+                    </tr>
+                  </thead>
+                  <tbody id="lotteryWinnersTableBody">
+                    <!-- Dynamic Rows -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ========================================================================= -->
     <!-- VIEW 4: AI SMART ASSISTANT (AI 智慧助手與語意名單辨識)                      -->
     <!-- ========================================================================= -->
     <section class="tab-view" id="aiView">
@@ -703,6 +902,26 @@
       <div style="display: flex; gap: 12px; width: 100%; justify-content: center; margin-top: 14px;">
         <button class="btn btn-secondary" style="flex: 1;" onclick="app.closeDeleteGuestModal()">取消保留</button>
         <button class="btn btn-danger" style="flex: 1;" id="confirmDeleteGuestBtn">確認刪除</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 1.5 Revoke Lottery Winner Confirmation Modal (棄權重抽確認對話盒) -->
+  <div class="modal-backdrop" id="revokeLotteryWinnerConfirmModal">
+    <div class="modal-dialog delete-modal-box" style="max-width: 480px;">
+      <div class="delete-warn-icon" style="background: rgba(220, 38, 38, 0.1); color: #DC2626;">🔄</div>
+      <div class="modal-title" style="color: #991B1B;">確定要將此得獎名額棄權重抽嗎？</div>
+      <div id="revokeLotteryConfirmDesc" style="font-size: 13.5px; color: var(--text-muted); line-height: 1.6; margin-top: 6px;">
+        <!-- Dynamic Winner Info -->
+      </div>
+      <div style="background: #FEF2F2; border: 1px solid #FCA5A5; border-radius: 10px; padding: 12px 14px; margin-top: 12px; font-size: 12px; color: #991B1B; text-align: left; line-height: 1.5;">
+        💡 <strong>名額釋回說明</strong>：棄權後，該貴賓所獲獎項將標記為「已棄權」，名額立即重新釋回現場已報到抽獎池，可隨時重新進行開獎！
+      </div>
+      <div style="display: flex; gap: 12px; width: 100%; justify-content: center; margin-top: 18px;">
+        <button type="button" class="btn btn-secondary" style="flex: 1;" onclick="app.closeRevokeLotteryModal()">取消保留</button>
+        <button type="button" class="btn btn-danger" style="flex: 1.2; background: #DC2626; border-color: #DC2626; font-weight: 800;" id="btnExecuteRevokeLottery" onclick="app.executeRevokeLotteryWinner()">
+          確認棄權並重釋名額
+        </button>
       </div>
     </div>
   </div>
@@ -1108,6 +1327,17 @@
           <input type="text" id="editMemberNotes" class="form-control" />
         </div>
 
+        <!-- Lottery Addon Authorization Toggle -->
+        <div class="form-group" style="background: #FDFDEA; border: 1px solid #F6E05E; padding: 12px 14px; border-radius: 10px;">
+          <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; font-size: 13.5px; font-weight: 800; color: #744210; margin: 0;">
+            <input type="checkbox" id="editMemberHasLottery" style="width: 18px; height: 18px;" />
+            <span>🎁 授權現場抽獎附加功能 (會員專屬 · NT$ 990 額外付費授權)</span>
+          </label>
+          <div style="font-size: 11.5px; color: #975A16; margin-top: 4px; padding-left: 28px;">
+            勾選後該會員名下所有活動均可解鎖現場抽獎控制台與舞台大螢幕連動。
+          </div>
+        </div>
+
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" onclick="app.closeEditMemberModal()">取消</button>
           <button type="submit" class="btn btn-primary">儲存變更</button>
@@ -1449,6 +1679,59 @@
     </div>
   </div>
 
+  <!-- 12. Purchase Lottery Modal (現場抽獎功能線上開通授權對話盒) -->
+  <div class="modal-backdrop" id="purchaseLotteryModal">
+    <div class="modal-dialog" style="max-width: 540px;">
+      <div class="modal-header" style="background: linear-gradient(135deg, #1A5E42 0%, #0F3B29 100%); color: #fff;">
+        <div class="modal-title" style="color: #fff;"><span>🎁</span> 開通「現場大抽獎」附加功能</div>
+        <button class="modal-close-btn" style="color: #fff;" onclick="app.closePurchaseLotteryModal()">✕</button>
+      </div>
+
+      <div style="padding: 24px;">
+        <div style="text-align: center; margin-bottom: 20px;">
+          <div style="width: 70px; height: 70px; background: #FEF3C7; border: 2px solid #F59E0B; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 32px; margin: 0 auto 12px auto; box-shadow: 0 4px 16px rgba(245,158,11,0.25);">
+            👑
+          </div>
+          <h3 style="font-size: 20px; font-weight: 900; color: #1E293B;">進階會員附加功能授權</h3>
+          <p style="font-size: 13px; color: #64748B; margin-top: 4px;">解鎖現場已報到抽獎母體池、舞台專屬大螢幕連動與 Excel 匯出</p>
+        </div>
+
+        <!-- Order Summary Card -->
+        <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 14px; padding: 18px; margin-bottom: 20px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-size: 13.5px;">
+            <span style="color: #64748B;">附加項目：</span>
+            <strong style="color: #1E293B;">現場智慧大抽獎系統模組</strong>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-size: 13.5px;">
+            <span style="color: #64748B;">適用活動：</span>
+            <span id="purchaseTargetEventName" style="color: #059669; font-weight: 700;">當前活動場次</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-size: 13.5px;">
+            <span style="color: #64748B;">授權範圍：</span>
+            <span style="color: #1E293B; font-weight: 600;">不限抽獎次數 · 支援大螢幕連動</span>
+          </div>
+          <div style="height: 1px; background: #CBD5E1; margin: 12px 0;"></div>
+          <div style="display: flex; justify-content: space-between; align-items: baseline;">
+            <span style="font-weight: 800; color: #1E293B;">應付總金額：</span>
+            <span style="font-size: 26px; font-weight: 900; color: #D97706;">NT$ 990</span>
+          </div>
+        </div>
+
+        <!-- Simulation Payment Channel Notice -->
+        <div style="background: #ECFDF5; border: 1px solid #A7F3D0; border-radius: 10px; padding: 12px 14px; font-size: 12.5px; color: #065F46; line-height: 1.5; margin-bottom: 22px;">
+          💳 <strong>立即線上開通</strong>：點擊「確認付費開通」後系統將立即派發授權憑證，即刻解鎖抽獎控制台與舞台大螢幕投影！
+        </div>
+
+        <div style="display: flex; gap: 12px;">
+          <button type="button" class="btn btn-secondary" style="flex: 1; padding: 12px;" onclick="app.closePurchaseLotteryModal()">取消</button>
+          <button type="button" class="btn btn-primary" id="btnConfirmPurchaseLottery" style="flex: 1.5; padding: 12px; font-size: 15px; font-weight: 800; justify-content: center; background: linear-gradient(135deg, #F59E0B, #D97706); border-color: #F59E0B; box-shadow: 0 4px 14px rgba(245,158,11,0.35);" onclick="app.executePurchaseLottery()">
+            🚀 確認付費並開通 (NT$ 990)
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Toast Notification Container -->
   <div id="appToastContainer" class="app-toast-container"></div>
 
@@ -1456,9 +1739,9 @@
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
   <!-- Scripts (with Cache Buster) -->
-  <script src="js/qrcode-lib.js?v=20261020_v3"></script>
-  <script src="js/audio.js?v=20261020_v3"></script>
-  <script src="js/api.js?v=20261020_v3"></script>
-  <script src="js/app.js?v=20261020_v3"></script>
+  <script src="js/qrcode-lib.js?v=20261021_lottery_v1"></script>
+  <script src="js/audio.js?v=20261021_lottery_v1"></script>
+  <script src="js/api.js?v=20261021_lottery_v1"></script>
+  <script src="js/app.js?v=20261021_lottery_v1"></script>
 </body>
 </html>

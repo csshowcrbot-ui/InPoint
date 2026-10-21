@@ -112,7 +112,7 @@ class CheckInApp {
         };
 
         // Filter and view states
-        this.currentTab = 'staff'; // staff, host, admin, ai, members
+        this.currentTab = 'staff'; // staff, host, admin, ai, members, lottery
         this.searchQuery = '';
         this.activeFilter = 'all'; // all, pending, checked, vip
         this.loginRole = 'Member'; // Member or Admin
@@ -127,6 +127,10 @@ class CheckInApp {
 
         // VIP Host Announcements
         this.announcedGuests = new Set();
+
+        // 現場大抽獎模組狀態 (會員專屬 · NT$ 990 額外付費及授權)
+        this.lotteryWinners = [];
+        this.lotteryStatus = null;
 
         // 姓名遮蔽控制 (預設開啟遮蔽防護，支援隨時開關 toggle)
         const savedMask = localStorage.getItem('inpoint_name_masked');
@@ -179,6 +183,9 @@ class CheckInApp {
             eventSelect.addEventListener('change', async (e) => {
                 this.currentEventId = e.target.value;
                 await this.loadGuestsAndStats();
+                if (this.currentTab === 'lottery') {
+                    await this.loadLotteryStatus();
+                }
             });
         }
 
@@ -345,6 +352,25 @@ class CheckInApp {
                         this.showToast(`📱 手機掃碼自主報到：【${name}】已完成簽到！`, 'success');
                     });
                 }
+            }
+        });
+
+        // 現場大抽獎即時廣播連動
+        window.apiService.on('lotteryDrawn', async (data) => {
+            if (data && data.eventId === this.currentEventId && this.currentTab === 'lottery') {
+                await this.loadLotteryStatus();
+            }
+        });
+
+        window.apiService.on('lotteryWinnerRevoked', async (data) => {
+            if (data && data.eventId === this.currentEventId && this.currentTab === 'lottery') {
+                await this.loadLotteryStatus();
+            }
+        });
+
+        window.apiService.on('lotteryReset', async (data) => {
+            if (data && data.eventId === this.currentEventId && this.currentTab === 'lottery') {
+                await this.loadLotteryStatus();
             }
         });
     }
@@ -773,6 +799,7 @@ class CheckInApp {
                 </td>
                 <td>
                   ${planBadge}
+                  ${m.hasLotteryAddon ? '<span class="badge-pill" style="background: #059669; color: #fff; font-size: 10px; margin-top: 4px; display: inline-block;">🎁 抽獎已授權</span>' : ''}
                   <div style="font-size: 11px; color: var(--text-muted); margin-top: 3px;">單場上限：${m.maxGuestsPerEvent || 500} 人</div>
                 </td>
                 <td>${expiryTag}</td>
@@ -940,6 +967,11 @@ class CheckInApp {
             document.getElementById('editMemberExpireAt').value = new Date(member.expireAt).toISOString().split('T')[0];
         }
 
+        const chkLottery = document.getElementById('editMemberHasLottery');
+        if (chkLottery) {
+            chkLottery.checked = !!member.hasLotteryAddon;
+        }
+
         const modal = document.getElementById('editMemberModal');
         if (modal) modal.classList.add('active');
     }
@@ -994,6 +1026,7 @@ class CheckInApp {
         const isActive = document.getElementById('editMemberIsActive').value === 'true';
         const password = document.getElementById('editMemberPassword').value.trim();
         const notes = document.getElementById('editMemberNotes').value.trim();
+        const hasLotteryAddon = document.getElementById('editMemberHasLottery') ? document.getElementById('editMemberHasLottery').checked : false;
 
         try {
             await window.apiService.updateMember(userId, {
@@ -1003,6 +1036,7 @@ class CheckInApp {
                 expireAt: expireAt ? new Date(expireAt).toISOString() : null,
                 maxGuestsPerEvent: maxGuests,
                 isActive,
+                hasLotteryAddon,
                 password: password || undefined,
                 notes
             });
@@ -3067,6 +3101,8 @@ class CheckInApp {
             this.loadMembers();
         } else if (tabName === 'admin') {
             this.renderAdminSpecs();
+        } else if (tabName === 'lottery') {
+            this.loadLotteryStatus();
         }
     }
 
@@ -3118,6 +3154,437 @@ class CheckInApp {
         }
         const d = new Date(s);
         return isNaN(d.getTime()) ? null : d;
+    }
+
+    // =========================================================================
+    // 現場大抽獎附加模組 (會員專屬 · 額外付費授權 NT$ 990 · 100% 針對現場已報到)
+    // =========================================================================
+
+    async loadLotteryStatus() {
+        if (!this.currentEventId) {
+            const lockedCard = document.getElementById('lotteryLockedCard');
+            const unlockedPanel = document.getElementById('lotteryUnlockedPanel');
+            if (lockedCard) lockedCard.style.display = 'none';
+            if (unlockedPanel) unlockedPanel.style.display = 'none';
+            return;
+        }
+
+        try {
+            const status = await window.apiService.getLotteryStatus(this.currentEventId);
+            this.lotteryStatus = status;
+
+            const lockedCard = document.getElementById('lotteryLockedCard');
+            const unlockedPanel = document.getElementById('lotteryUnlockedPanel');
+
+            if (status && status.isAuthorized) {
+                if (lockedCard) lockedCard.style.display = 'none';
+                if (unlockedPanel) unlockedPanel.style.display = 'flex';
+
+                // 更新母體池指標：現場已報到抽獎母體、合資格抽獎人數、已累計得獎人數
+                const checkedInElem = document.getElementById('lotteryCheckedInCount');
+                const eligibleElem = document.getElementById('lotteryEligibleCount');
+                const winnerElem = document.getElementById('lotteryWinnerCount');
+
+                const cCount = status.totalCheckedIn !== undefined ? status.totalCheckedIn : (status.checkedInGuestsCount || 0);
+                const eCount = status.totalEligible !== undefined ? status.totalEligible : (status.eligibleGuestsCount || 0);
+                const wCount = status.totalWinners !== undefined ? status.totalWinners : (status.winnersCount || 0);
+
+                if (checkedInElem) checkedInElem.innerText = cCount;
+                if (eligibleElem) eligibleElem.innerText = eCount;
+                if (winnerElem) winnerElem.innerText = wCount;
+
+                await this.loadLotteryWinners();
+            } else {
+                if (lockedCard) lockedCard.style.display = 'block';
+                if (unlockedPanel) unlockedPanel.style.display = 'none';
+            }
+        } catch (err) {
+            console.error('載入抽獎狀態失敗:', err);
+            this.showToast('無法取得抽獎授權狀態，請檢查伺服器連線', 'error');
+        }
+    }
+
+    async loadLotteryWinners() {
+        if (!this.currentEventId) return;
+        try {
+            const winners = await window.apiService.getLotteryWinners(this.currentEventId);
+            this.lotteryWinners = Array.isArray(winners) ? winners : [];
+            this.renderLotteryWinnersTable();
+        } catch (err) {
+            console.error('載入得獎名單失敗:', err);
+        }
+    }
+
+    renderLotteryWinnersTable() {
+        const tbody = document.getElementById('lotteryWinnersTableBody');
+        if (!tbody) return;
+
+        if (!this.lotteryWinners || this.lotteryWinners.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="5" style="text-align: center; color: var(--text-muted); padding: 36px 16px;">
+                        <div style="font-size: 28px; margin-bottom: 6px;">🎁</div>
+                        <div>目前尚無中獎紀錄，請在左側控制台設定獎項並點擊開獎！</div>
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+
+        // 依抽取時間倒序排列（最新抽出排最上方）
+        const sorted = [...this.lotteryWinners].sort((a, b) => {
+            const ta = new Date(a.wonAt || a.drawnAt || 0).getTime();
+            const tb = new Date(b.wonAt || b.drawnAt || 0).getTime();
+            return tb - ta;
+        });
+
+        tbody.innerHTML = sorted.map(w => {
+            const wId = w.winnerId || w.WinnerId || '';
+            const evId = w.eventId || w.EventId || this.currentEventId || '';
+            const prizeName = this.escapeHtml(w.prizeName || (w.prize ? w.prize.prizeName : '現場幸運獎'));
+            const guestName = this.escapeHtml(w.guestName || (w.guest ? w.guest.name : '中獎貴賓'));
+            const org = this.escapeHtml(w.organization || (w.guest ? w.guest.organization : '') || '無單位');
+            const title = this.escapeHtml(w.title || (w.guest ? w.guest.title : '') || '');
+            const seat = this.escapeHtml(w.seatNumber || w.tableNo || (w.guest ? (w.guest.seatNumber || w.guest.tableNo) : '') || '自由入座');
+            const orgTitle = title ? `${org} / ${title}` : org;
+
+            let actionHtml = '';
+            if (w.isRevoked) {
+                actionHtml = `<span class="badge-pill" style="background: #EF4444; color: #fff; font-size: 11px;">已棄權</span>`;
+            } else {
+                actionHtml = `
+                    <button type="button" class="btn btn-secondary btn-lottery-revoke" 
+                            data-winner-id="${wId}" 
+                            data-event-id="${evId}"
+                            data-guest-name="${guestName}" 
+                            data-prize-name="${prizeName}"
+                            onclick="window.app ? window.app.handleRevokeLotteryWinner('${wId}', '${evId}') : app.handleRevokeLotteryWinner('${wId}', '${evId}')" 
+                            title="貴賓未在場？點擊一鍵廢棄並重釋名額回抽獎池"
+                            style="font-size: 11.5px; padding: 4px 8px; color: #DC2626; border-color: #FCA5A5; background: #FEF2F2; cursor: pointer; transition: all 0.2s;">
+                        🗑️ 棄權重抽
+                    </button>
+                `;
+            }
+
+            return `
+                <tr style="${w.isRevoked ? 'opacity: 0.55; background: #FFF5F5;' : ''}">
+                    <td style="padding: 10px; font-weight: 800; color: #B45309;">
+                        🏆 ${prizeName}
+                    </td>
+                    <td style="padding: 10px; font-weight: 700; color: #1E293B; font-size: 14px;">
+                        ${guestName}
+                    </td>
+                    <td style="padding: 10px; color: #475569; font-size: 12.5px;">
+                        ${orgTitle}
+                    </td>
+                    <td style="padding: 10px; font-weight: 600; color: #059669; font-size: 12.5px;">
+                        ${seat}
+                    </td>
+                    <td style="padding: 10px; text-align: center;">
+                        ${actionHtml}
+                    </td>
+                </tr>
+            `;
+        }).join('');
+
+        // 事件委派雙重保險：確保所有按鈕 100% 響應點擊
+        tbody.querySelectorAll('.btn-lottery-revoke').forEach(btn => {
+            btn.onclick = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const wId = btn.dataset.winnerId;
+                const evId = btn.dataset.eventId || this.currentEventId;
+                this.handleRevokeLotteryWinner(wId, evId);
+            };
+        });
+    }
+
+    showPurchaseLotteryModal() {
+        const curEvent = this.events.find(e => (e.eventId === this.currentEventId || e.id === this.currentEventId));
+        const targetEventNameElem = document.getElementById('purchaseTargetEventName');
+        if (targetEventNameElem) {
+            targetEventNameElem.innerText = curEvent ? (curEvent.name || curEvent.eventName) : '當前活動場次';
+        }
+        const modal = document.getElementById('purchaseLotteryModal');
+        if (modal) modal.classList.add('active');
+    }
+
+    closePurchaseLotteryModal() {
+        const modal = document.getElementById('purchaseLotteryModal');
+        if (modal) modal.classList.remove('active');
+    }
+
+    async executePurchaseLottery() {
+        if (!this.currentEventId) {
+            this.showToast('請先選擇欲開通之活動場次', 'warning');
+            return;
+        }
+
+        const btn = document.getElementById('btnConfirmPurchaseLottery');
+        const origText = btn ? btn.innerText : '';
+        if (btn) {
+            btn.disabled = true;
+            btn.innerText = '處理授權開通中...';
+        }
+
+        try {
+            await window.apiService.purchaseLottery(this.currentEventId, 'OnlineCreditCard');
+            this.showToast('🎉 恭喜！現場大抽獎功能授權開通成功 (NT$ 990)！已解鎖控制台與大螢幕舞台連動。', 'success');
+            this.closePurchaseLotteryModal();
+            await this.loadLotteryStatus();
+        } catch (err) {
+            alert(err.message || '付費開通授權失敗，請稍後再試');
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.innerText = origText;
+            }
+        }
+    }
+
+    setLotteryPrizePreset(presetName) {
+        const input = document.getElementById('drawPrizeName');
+        if (input) {
+            input.value = presetName;
+            input.focus();
+        }
+    }
+
+    async handleExecuteDraw(e) {
+        if (e) e.preventDefault();
+        if (!this.currentEventId) {
+            this.showToast('請先選擇活動場次', 'warning');
+            return;
+        }
+
+        const prizeNameInput = document.getElementById('drawPrizeName');
+        const quantityInput = document.getElementById('drawQuantity');
+        const excludePrevInput = document.getElementById('drawExcludePrevious');
+
+        let prizeName = prizeNameInput ? prizeNameInput.value.trim() : '';
+        const quantity = quantityInput ? parseInt(quantityInput.value, 10) : 1;
+        const excludePrevious = excludePrevInput ? excludePrevInput.checked : true;
+
+        if (!prizeName) {
+            // 首次執行抽獎時不需強制填寫，點擊一鍵開獎時自動以「現場幸運大獎」呈現
+            prizeName = '現場幸運大獎';
+            if (prizeNameInput) {
+                prizeNameInput.value = prizeName;
+            }
+        }
+        if (!quantity || quantity < 1) {
+            this.showToast('抽取名額必須大於 0', 'warning');
+            return;
+        }
+
+        const btn = document.getElementById('btnOneClickDraw');
+        const origText = btn ? btn.innerText : '';
+        if (btn) {
+            btn.disabled = true;
+            btn.innerText = '🎲 大螢幕高速抽動旋轉中 (4秒)...';
+        }
+
+        try {
+            // 1. 先啟動大螢幕高速抽動畫面
+            await window.apiService.startLotterySpin(this.currentEventId, prizeName, quantity, excludePrevious);
+            this.showToast(`⚡ 大螢幕已開始高速抽動！倒數 4 秒即將定格揭曉【${prizeName}】！`, 'info');
+
+            // 2. 倒數 4 秒營造緊張刺激氣氛
+            await new Promise(r => setTimeout(r, 4000));
+
+            // 3. 正式執行抽獎並揭曉
+            const res = await window.apiService.drawLottery(this.currentEventId, prizeName, quantity, excludePrevious);
+            const winners = res.winners || [];
+
+            if (winners.length > 0) {
+                const names = winners.map(w => w.guestName).join('、');
+                this.showToast(`🎉 揭曉中獎！恭喜【${names}】榮獲【${prizeName}】！`, 'success');
+            } else {
+                this.showToast(`已抽出獎項【${prizeName}】！`, 'success');
+            }
+
+            // 重新刷新後台抽獎狀態與得獎名單
+            await this.loadLotteryStatus();
+        } catch (err) {
+            alert(err.message || '抽獎失敗，請確認現場已報到人數是否足夠！');
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.innerText = origText;
+            }
+        }
+    }
+
+    async handleManualSpinStart() {
+        if (!this.currentEventId) {
+            this.showToast('請先選擇活動場次', 'warning');
+            return;
+        }
+
+        const prizeNameInput = document.getElementById('drawPrizeName');
+        const quantityInput = document.getElementById('drawQuantity');
+        const excludePrevInput = document.getElementById('drawExcludePrevious');
+
+        const prizeName = prizeNameInput && prizeNameInput.value.trim() ? prizeNameInput.value.trim() : '現場幸運大獎';
+        if (prizeNameInput && !prizeNameInput.value.trim()) prizeNameInput.value = prizeName;
+        const quantity = quantityInput ? parseInt(quantityInput.value, 10) : 1;
+        const excludePrevious = excludePrevInput ? excludePrevInput.checked : true;
+
+        try {
+            await window.apiService.startLotterySpin(this.currentEventId, prizeName, quantity, excludePrevious);
+            this.showToast('⚡ 大螢幕已持續高速抽動！現場氣氛達到高潮時，請點擊「🛑 立即定格揭曉」。', 'info');
+        } catch (err) {
+            alert(err.message || '啟動大螢幕抽動失敗');
+        }
+    }
+
+    async handleManualStopDraw() {
+        if (!this.currentEventId) {
+            this.showToast('請先選擇活動場次', 'warning');
+            return;
+        }
+
+        const prizeNameInput = document.getElementById('drawPrizeName');
+        const quantityInput = document.getElementById('drawQuantity');
+        const excludePrevInput = document.getElementById('drawExcludePrevious');
+
+        const prizeName = prizeNameInput && prizeNameInput.value.trim() ? prizeNameInput.value.trim() : '現場幸運大獎';
+        if (prizeNameInput && !prizeNameInput.value.trim()) prizeNameInput.value = prizeName;
+        const quantity = quantityInput ? parseInt(quantityInput.value, 10) : 1;
+        const excludePrevious = excludePrevInput ? excludePrevInput.checked : true;
+
+        try {
+            const res = await window.apiService.drawLottery(this.currentEventId, prizeName, quantity, excludePrevious);
+            const winners = res.winners || [];
+            if (winners.length > 0) {
+                const names = winners.map(w => w.guestName).join('、');
+                this.showToast(`🎉 定格揭曉！恭喜【${names}】榮獲【${prizeName}】！`, 'success');
+            } else {
+                this.showToast(`已抽出獎項【${prizeName}】！`, 'success');
+            }
+            await this.loadLotteryStatus();
+        } catch (err) {
+            alert(err.message || '揭曉失敗');
+        }
+    }
+
+    handleRevokeLotteryWinner(winnerId, eventIdOrGuestName, prizeName) {
+        if (!winnerId) {
+            this.showToast('無法識別該得獎紀錄編號', 'warning');
+            return;
+        }
+
+        const winner = (this.lotteryWinners || []).find(x => (x.winnerId || x.WinnerId) === winnerId);
+        const guestName = winner ? (winner.guestName || (winner.guest ? winner.guest.name : '中獎者')) : (typeof eventIdOrGuestName === 'string' && !eventIdOrGuestName.startsWith('event_') ? eventIdOrGuestName : '中獎貴賓');
+        const prize = winner ? (winner.prizeName || (winner.prize ? winner.prize.prizeName : '現場獎項')) : (prizeName || '獎項');
+        const targetEventId = (winner ? (winner.eventId || winner.EventId) : null) || (typeof eventIdOrGuestName === 'string' && eventIdOrGuestName.startsWith('event_') ? eventIdOrGuestName : null) || this.currentEventId;
+
+        this.pendingRevokeWinnerId = winnerId;
+        this.pendingRevokeEventId = targetEventId;
+
+        const descElem = document.getElementById('revokeLotteryConfirmDesc');
+        if (descElem) {
+            descElem.innerHTML = `即將將貴賓【<strong style="color: #1E293B;">${this.escapeHtml(guestName)}</strong>】獲得之【<strong style="color: #B45309;">${this.escapeHtml(prize)}</strong>】標記為棄權。<br/>此貴賓資格將重新釋回已報到候選池。`;
+        }
+
+        const modal = document.getElementById('revokeLotteryWinnerConfirmModal');
+        if (modal) {
+            modal.classList.add('active');
+        } else {
+            this.executeRevokeLotteryWinner();
+        }
+    }
+
+    closeRevokeLotteryModal() {
+        const modal = document.getElementById('revokeLotteryWinnerConfirmModal');
+        if (modal) modal.classList.remove('active');
+        this.pendingRevokeWinnerId = null;
+        this.pendingRevokeEventId = null;
+    }
+
+    async executeRevokeLotteryWinner() {
+        const winnerId = this.pendingRevokeWinnerId;
+        const targetEventId = this.pendingRevokeEventId || this.currentEventId;
+
+        if (!winnerId) return;
+
+        const btn = document.getElementById('btnExecuteRevokeLottery');
+        const origText = btn ? btn.innerText : '';
+        if (btn) {
+            btn.disabled = true;
+            btn.innerText = '處理中...';
+        }
+
+        try {
+            await window.apiService.revokeLotteryWinner(targetEventId, winnerId);
+            this.showToast('✓ 已成功將該名額標記為棄權，抽獎資格已釋回已報到池！', 'success');
+
+            const winner = (this.lotteryWinners || []).find(x => (x.winnerId || x.WinnerId) === winnerId);
+            if (winner) {
+                winner.isRevoked = true;
+            }
+
+            this.closeRevokeLotteryModal();
+            this.renderLotteryWinnersTable();
+            await this.loadLotteryStatus();
+        } catch (err) {
+            console.error('棄權操作失敗:', err);
+            alert(err.message || '棄權操作失敗，請稍後再試');
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.innerText = origText;
+            }
+        }
+    }
+
+    async confirmClearLotteryWinners() {
+        if (!this.currentEventId) return;
+
+        const confirmMsg = '⚠️ 警告：確定要清空本活動所有的中獎紀錄嗎？\n\n所有中獎紀錄將被清除，所有已報到貴賓將重新具備抽獎資格，大螢幕榮譽榜也將同步重置！此動作無法復原！';
+        if (!confirm(confirmMsg)) return;
+
+        try {
+            await window.apiService.clearLotteryWinners(this.currentEventId);
+            this.showToast('已清空本場次所有抽獎紀錄，大螢幕已重置！', 'success');
+            await this.loadLotteryStatus();
+        } catch (err) {
+            alert(err.message || '清空中獎紀錄失敗');
+        }
+    }
+
+    exportLotteryCsv() {
+        if (!this.currentEventId) {
+            this.showToast('請先選擇活動場次', 'warning');
+            return;
+        }
+        const url = window.apiService.getLotteryExportUrl(this.currentEventId);
+        window.open(url, '_blank');
+    }
+
+    openLotteryBigScreen() {
+        if (!this.currentEventId) {
+            this.showToast('請先選擇活動場次', 'warning');
+            return;
+        }
+        window.open(`lottery.html?eventId=${encodeURIComponent(this.currentEventId)}`, '_blank');
+    }
+
+    copyLotteryScreenUrl() {
+        if (!this.currentEventId) {
+            this.showToast('請先選擇活動場次', 'warning');
+            return;
+        }
+        const fullUrl = `${window.location.origin}/lottery.html?eventId=${encodeURIComponent(this.currentEventId)}`;
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(fullUrl).then(() => {
+                this.showToast('📋 已複製大螢幕展示網址至剪貼簿！可直接傳給投影機或音控同仁開啟。', 'success');
+            }).catch(() => {
+                prompt('請手動複製大螢幕展示網址：', fullUrl);
+            });
+        } else {
+            prompt('請手動複製大螢幕展示網址：', fullUrl);
+        }
     }
 }
 

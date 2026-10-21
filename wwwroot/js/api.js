@@ -598,6 +598,169 @@ class ApiService {
         const tokenParam = this.token ? `token=${encodeURIComponent(this.token)}&` : '';
         return `${this.apiBase}api/events/${encodeURIComponent(eventId)}/export?${tokenParam}_t=${Date.now()}`;
     }
+
+    // =========================================================================
+    // LOTTERY ADDON MODULE APIS (附加功能：現場抽獎 - NT$ 990 額外付費及授權)
+    // =========================================================================
+
+    async getLotteryStatus(eventId) {
+        const res = await fetch(`${this.apiBase}api/lottery/status?eventId=${encodeURIComponent(eventId)}&_t=${Date.now()}`, {
+            cache: 'no-store',
+            headers: this.getAuthHeaders()
+        });
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            throw new Error(err.message || '取得抽獎狀態失敗');
+        }
+        return await res.json();
+    }
+
+    async purchaseLottery(eventId, paymentMethod = 'OnlineCreditCard') {
+        const res = await fetch(`${this.apiBase}api/lottery/purchase`, {
+            method: 'POST',
+            cache: 'no-store',
+            headers: this.getAuthHeaders({ 'Content-Type': 'application/json' }),
+            body: JSON.stringify({ eventId, paymentMethod, amount: 990 })
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.message || '開通抽獎功能失敗');
+        
+        // 更新本地 user session 中的 hasLotteryAddon
+        if (this.currentUser) {
+            this.currentUser.hasLotteryAddon = true;
+            this.saveSession(this.token, this.currentUser, true);
+        }
+        return data;
+    }
+
+    async getEligibleLotteryGuests(eventId, excludePrevious = true) {
+        const res = await fetch(`${this.apiBase}api/lottery/eligible-guests?eventId=${encodeURIComponent(eventId)}&excludePrevious=${excludePrevious}&_t=${Date.now()}`, {
+            cache: 'no-store',
+            headers: this.getAuthHeaders()
+        });
+        if (!res.ok) throw new Error('取得符合抽獎資格名單失敗');
+        return await res.json();
+    }
+
+    async getLotteryPrizes(eventId) {
+        const res = await fetch(`${this.apiBase}api/lottery/prizes?eventId=${encodeURIComponent(eventId)}&_t=${Date.now()}`, {
+            cache: 'no-store',
+            headers: this.getAuthHeaders()
+        });
+        if (!res.ok) throw new Error('取得獎項失敗');
+        return await res.json();
+    }
+
+    async createLotteryPrize(eventId, prizeName, quantity) {
+        const res = await fetch(`${this.apiBase}api/lottery/prizes`, {
+            method: 'POST',
+            cache: 'no-store',
+            headers: this.getAuthHeaders({ 'Content-Type': 'application/json' }),
+            body: JSON.stringify({ eventId, prizeName, quantity: parseInt(quantity, 10) })
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.message || '建立獎項失敗');
+        return data;
+    }
+
+    async deleteLotteryPrize(eventId, prizeId) {
+        const res = await fetch(`${this.apiBase}api/lottery/prizes/${encodeURIComponent(prizeId)}?eventId=${encodeURIComponent(eventId)}`, {
+            method: 'DELETE',
+            cache: 'no-store',
+            headers: this.getAuthHeaders()
+        });
+        return res.ok;
+    }
+
+    async getLotteryWinners(eventId) {
+        const res = await fetch(`${this.apiBase}api/lottery/winners?eventId=${encodeURIComponent(eventId)}&_t=${Date.now()}`, {
+            cache: 'no-store',
+            headers: this.getAuthHeaders()
+        });
+        if (!res.ok) throw new Error('取得得獎紀錄失敗');
+        return await res.json();
+    }
+
+    async startLotterySpin(eventId, prizeName, quantity, excludePrevious = true) {
+        const res = await fetch(`${this.apiBase}api/lottery/spin-start`, {
+            method: 'POST',
+            cache: 'no-store',
+            headers: this.getAuthHeaders({ 'Content-Type': 'application/json' }),
+            body: JSON.stringify({ eventId, prizeName, quantity: parseInt(quantity, 10), excludePreviousWinners: excludePrevious })
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.message || '啟動抽動畫面失敗');
+
+        if (typeof BroadcastChannel !== 'undefined') {
+            try {
+                const bc = new BroadcastChannel('inpoint_lottery_channel');
+                bc.postMessage({ type: 'START_SPIN', payload: { eventId, prizeName, quantity } });
+            } catch (e) {}
+        }
+        return data;
+    }
+
+    async drawLottery(eventId, prizeName, quantity, excludePrevious = true, prizeId = null) {
+        const res = await fetch(`${this.apiBase}api/lottery/draw`, {
+            method: 'POST',
+            cache: 'no-store',
+            headers: this.getAuthHeaders({ 'Content-Type': 'application/json' }),
+            body: JSON.stringify({ eventId, prizeName, quantity: parseInt(quantity, 10), excludePreviousWinners: excludePrevious, prizeId })
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.message || '抽獎失敗');
+
+        if (typeof BroadcastChannel !== 'undefined') {
+            try {
+                const bc = new BroadcastChannel('inpoint_lottery_channel');
+                bc.postMessage({ type: 'DRAW_WINNERS', payload: { eventId, prizeName, winners: data.winners } });
+            } catch (e) {}
+        }
+        return data;
+    }
+
+    async revokeLotteryWinner(eventId, winnerId) {
+        const res = await fetch(`${this.apiBase}api/lottery/revoke`, {
+            method: 'POST',
+            cache: 'no-store',
+            headers: this.getAuthHeaders({ 'Content-Type': 'application/json' }),
+            body: JSON.stringify({ eventId, winnerId })
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.message || '廢棄重抽失敗');
+
+        if (typeof BroadcastChannel !== 'undefined') {
+            try {
+                const bc = new BroadcastChannel('inpoint_lottery_channel');
+                bc.postMessage({ type: 'REVOKE_WINNER', payload: { eventId, winnerId } });
+            } catch (e) {}
+        }
+        return data;
+    }
+
+    async clearLotteryWinners(eventId) {
+        const res = await fetch(`${this.apiBase}api/lottery/clear`, {
+            method: 'POST',
+            cache: 'no-store',
+            headers: this.getAuthHeaders({ 'Content-Type': 'application/json' }),
+            body: JSON.stringify({ eventId })
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.message || '清空中獎紀錄失敗');
+
+        if (typeof BroadcastChannel !== 'undefined') {
+            try {
+                const bc = new BroadcastChannel('inpoint_lottery_channel');
+                bc.postMessage({ type: 'RESET', payload: { eventId } });
+            } catch (e) {}
+        }
+        return data;
+    }
+
+    getLotteryExportUrl(eventId) {
+        const tokenParam = this.token ? `token=${encodeURIComponent(this.token)}&` : '';
+        return `${this.apiBase}api/lottery/export?eventId=${encodeURIComponent(eventId)}&${tokenParam}_t=${Date.now()}`;
+    }
 }
 
 window.apiService = new ApiService();

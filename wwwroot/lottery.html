@@ -1,0 +1,1400 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>現場大抽獎 · 震撼大螢幕舞台 | InPoint Live Lottery</title>
+  <meta name="description" content="InPoint 智慧活動報到與現場抽獎大螢幕展示系統 - 100% 針對現場已報到貴賓抽獎，雙端即時連動、震撼光影彩帶與得獎唱名。" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎁</text></svg>" />
+  <style>
+    :root {
+      --bg-gradient: radial-gradient(circle at 50% 20%, #153e2e 0%, #0c231a 50%, #05100b 100%);
+      --gold-primary: #FFD700;
+      --gold-glow: rgba(255, 215, 0, 0.45);
+      --gold-dark: #B8860B;
+      --forest-bright: #2ECC71;
+      --glass-panel: rgba(255, 255, 255, 0.07);
+      --glass-border: rgba(255, 255, 255, 0.15);
+      --text-main: #FFFFFF;
+      --text-muted: #A3D4BE;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background: var(--bg-gradient);
+      color: var(--text-main);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+      user-select: none;
+      position: relative;
+    }
+
+    /* Ambient Animated Background Lights */
+    .ambient-light {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(100px);
+      pointer-events: none;
+      z-index: 0;
+      opacity: 0.25;
+      animation: floatLight 12s infinite alternate ease-in-out;
+    }
+    .light-1 {
+      width: 450px;
+      height: 450px;
+      background: #2ECC71;
+      top: -100px;
+      left: 10%;
+    }
+    .light-2 {
+      width: 500px;
+      height: 500px;
+      background: #F1C40F;
+      bottom: -150px;
+      right: 15%;
+      animation-delay: -6s;
+    }
+
+    @keyframes floatLight {
+      0% { transform: translate(0, 0) scale(1); }
+      100% { transform: translate(40px, 30px) scale(1.15); }
+    }
+
+    /* Confetti Canvas */
+    #confettiCanvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 999;
+    }
+
+    /* Header Bar */
+    .lottery-header {
+      padding: 18px 36px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(8, 26, 18, 0.75);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--glass-border);
+      position: relative;
+      z-index: 10;
+    }
+
+    .brand-group {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .brand-icon {
+      width: 48px;
+      height: 48px;
+      background: linear-gradient(135deg, #FFD700, #B8860B);
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 26px;
+      box-shadow: 0 4px 18px rgba(255, 215, 0, 0.4);
+      animation: spinGlow 4s infinite ease-in-out;
+    }
+
+    @keyframes spinGlow {
+      0%, 100% { transform: scale(1); box-shadow: 0 4px 18px rgba(255, 215, 0, 0.4); }
+      50% { transform: scale(1.05); box-shadow: 0 4px 26px rgba(255, 215, 0, 0.7); }
+    }
+
+    .brand-title h1 {
+      font-size: 24px;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 0;
+    }
+
+    .brand-title p {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(46, 204, 113, 0.15);
+      border: 1px solid rgba(46, 204, 113, 0.35);
+      padding: 6px 14px;
+      border-radius: 30px;
+      font-size: 13px;
+      font-weight: 600;
+      color: #A3E9C4;
+    }
+
+    .status-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: #2ECC71;
+      box-shadow: 0 0 10px #2ECC71;
+      animation: blink 1.6s infinite ease-in-out;
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.85); }
+    }
+
+    .btn-action {
+      background: var(--glass-panel);
+      border: 1px solid var(--glass-border);
+      color: #fff;
+      padding: 8px 16px;
+      border-radius: 10px;
+      font-size: 13.5px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+    }
+
+    .btn-action:hover {
+      background: rgba(255, 255, 255, 0.16);
+      transform: translateY(-1px);
+    }
+
+    /* Main Container */
+    .lottery-main {
+      flex: 1;
+      display: flex;
+      position: relative;
+      z-index: 5;
+      padding: 24px 36px 36px 36px;
+      gap: 28px;
+    }
+
+    /* Stage Area (Left/Center) */
+    .stage-area {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 580px;
+      background: rgba(12, 38, 27, 0.55);
+      border: 1px solid var(--glass-border);
+      border-radius: 24px;
+      backdrop-filter: blur(14px);
+      padding: 32px 24px;
+      position: relative;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.3);
+      overflow: hidden;
+    }
+
+    /* Stage Top Info Strip */
+    .stage-info-strip {
+      position: absolute;
+      top: 24px;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      background: rgba(0, 0, 0, 0.35);
+      border: 1px solid rgba(255, 215, 0, 0.25);
+      padding: 10px 24px;
+      border-radius: 50px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    }
+
+    .info-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+    }
+
+    .info-item .label {
+      color: var(--text-muted);
+    }
+
+    .info-item .val {
+      font-weight: 800;
+      color: #FFD700;
+    }
+
+    /* Idle View */
+    .view-idle {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      animation: fadeIn 0.6s ease;
+    }
+
+    .idle-icon-wrap {
+      width: 140px;
+      height: 140px;
+      background: radial-gradient(circle, rgba(255, 215, 0, 0.2) 0%, rgba(255, 215, 0, 0.02) 70%);
+      border: 2px dashed rgba(255, 215, 0, 0.4);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 64px;
+      margin-bottom: 24px;
+      box-shadow: 0 0 40px rgba(255, 215, 0, 0.2);
+      animation: pulseIdle 4s infinite ease-in-out;
+    }
+
+    @keyframes pulseIdle {
+      0%, 100% { transform: scale(1); box-shadow: 0 0 30px rgba(255, 215, 0, 0.2); }
+      50% { transform: scale(1.06); box-shadow: 0 0 50px rgba(255, 215, 0, 0.45); }
+    }
+
+    .idle-title {
+      font-size: 38px;
+      font-weight: 900;
+      letter-spacing: 2px;
+      background: linear-gradient(135deg, #FFFFFF, #FFD700);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 12px;
+    }
+
+    .idle-subtitle {
+      font-size: 17px;
+      color: #C1E1D2;
+      max-width: 540px;
+      line-height: 1.6;
+      margin-bottom: 24px;
+    }
+
+    .idle-current-prize-card {
+      background: linear-gradient(135deg, rgba(255, 215, 0, 0.15), rgba(46, 204, 113, 0.1));
+      border: 1px solid rgba(255, 215, 0, 0.4);
+      padding: 14px 28px;
+      border-radius: 16px;
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 18px;
+      font-weight: 700;
+      color: #FFEA79;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+    }
+
+    /* Spinning Slot Machine View */
+    .view-spinning {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      width: 100%;
+      max-width: 800px;
+      animation: fadeIn 0.4s ease;
+    }
+
+    .spin-target-prize {
+      font-size: 26px;
+      font-weight: 800;
+      color: #FFD700;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-shadow: 0 0 15px rgba(255, 215, 0, 0.5);
+    }
+
+    .slot-machine-frame {
+      width: 100%;
+      height: 240px;
+      background: #061810;
+      border: 3px solid #FFD700;
+      border-radius: 20px;
+      box-shadow: 0 0 35px rgba(255, 215, 0, 0.5), inset 0 0 25px rgba(0, 0, 0, 0.8);
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .slot-indicator-line {
+      position: absolute;
+      top: 50%;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, #FFD700, transparent);
+      box-shadow: 0 0 12px #FFD700;
+      transform: translateY(-50%);
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    .slot-rolling-card {
+      font-size: 48px;
+      font-weight: 900;
+      letter-spacing: 3px;
+      color: #FFFFFF;
+      text-shadow: 0 4px 15px rgba(0, 0, 0, 0.8);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      animation: textJitter 0.08s infinite alternate;
+    }
+
+    @keyframes textJitter {
+      0% { transform: translateY(-4px) scale(0.98); opacity: 0.9; }
+      100% { transform: translateY(4px) scale(1.02); opacity: 1; }
+    }
+
+    .slot-rolling-meta {
+      font-size: 20px;
+      font-weight: 700;
+      color: #2ECC71;
+      letter-spacing: 1px;
+    }
+
+    .spin-status-note {
+      margin-top: 24px;
+      font-size: 16px;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    /* Winner Revealed View */
+    .view-revealed {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      width: 100%;
+      animation: revealZoom 0.6s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+    }
+
+    @keyframes revealZoom {
+      0% { transform: scale(0.6); opacity: 0; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    .reveal-header-badge {
+      background: linear-gradient(135deg, #FFD700, #F39C12);
+      color: #1A382A;
+      font-size: 18px;
+      font-weight: 900;
+      padding: 8px 24px;
+      border-radius: 30px;
+      letter-spacing: 1.5px;
+      margin-bottom: 16px;
+      box-shadow: 0 4px 20px rgba(255, 215, 0, 0.5);
+    }
+
+    .reveal-prize-title {
+      font-size: 32px;
+      font-weight: 900;
+      color: #FFFFFF;
+      margin-bottom: 24px;
+      text-shadow: 0 2px 14px rgba(0,0,0,0.6);
+    }
+
+    .winners-grid {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 20px;
+      width: 100%;
+      max-width: 960px;
+      max-height: 440px;
+      overflow-y: auto;
+      padding: 10px;
+    }
+
+    .winner-card {
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.04));
+      border: 2px solid #FFD700;
+      border-radius: 20px;
+      padding: 24px 30px;
+      min-width: 280px;
+      max-width: 380px;
+      flex: 1 1 calc(50% - 20px);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4), inset 0 0 20px rgba(255, 215, 0, 0.15);
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      animation: cardPop 0.5s ease backwards;
+    }
+
+    @keyframes cardPop {
+      0% { transform: translateY(30px) scale(0.9); opacity: 0; }
+      100% { transform: translateY(0) scale(1); opacity: 1; }
+    }
+
+    .winner-card.single-mode {
+      min-width: 380px;
+      padding: 36px 48px;
+    }
+
+    .winner-crown {
+      font-size: 36px;
+      margin-bottom: 8px;
+      filter: drop-shadow(0 2px 8px rgba(255, 215, 0, 0.6));
+    }
+
+    .winner-name {
+      font-size: 36px;
+      font-weight: 900;
+      letter-spacing: 2px;
+      color: #FFFFFF;
+      margin-bottom: 10px;
+    }
+
+    .winner-card.single-mode .winner-name {
+      font-size: 50px;
+    }
+
+    .winner-org-title {
+      font-size: 17px;
+      color: #A3E9C4;
+      font-weight: 700;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .winner-table-badge {
+      background: rgba(255, 215, 0, 0.2);
+      border: 1px solid rgba(255, 215, 0, 0.5);
+      color: #FFE66D;
+      padding: 6px 16px;
+      border-radius: 20px;
+      font-size: 15px;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+    }
+
+    /* Sidebar History (Right) */
+    .history-sidebar {
+      width: 360px;
+      background: rgba(9, 29, 20, 0.65);
+      border: 1px solid var(--glass-border);
+      border-radius: 24px;
+      backdrop-filter: blur(14px);
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.3);
+    }
+
+    .history-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 14px;
+      border-bottom: 1px solid var(--glass-border);
+      margin-bottom: 16px;
+    }
+
+    .history-title {
+      font-size: 17px;
+      font-weight: 800;
+      color: #FFD700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .history-count {
+      font-size: 12.5px;
+      background: rgba(255, 215, 0, 0.15);
+      border: 1px solid rgba(255, 215, 0, 0.3);
+      color: #FFD700;
+      padding: 3px 10px;
+      border-radius: 12px;
+      font-weight: 700;
+    }
+
+    .history-list {
+      flex: 1;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      padding-right: 4px;
+      scroll-behavior: smooth;
+    }
+
+    .history-list::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    .history-list::-webkit-scrollbar-track {
+      background: rgba(0, 0, 0, 0.15);
+      border-radius: 4px;
+    }
+
+    .history-list::-webkit-scrollbar-thumb {
+      background: rgba(255, 215, 0, 0.35);
+      border-radius: 4px;
+    }
+
+    .history-list::-webkit-scrollbar-thumb:hover {
+      background: rgba(255, 215, 0, 0.65);
+    }
+
+    .history-item {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 14px;
+      padding: 12px 14px;
+      transition: all 0.2s ease;
+    }
+
+    .history-item:hover {
+      background: rgba(255, 255, 255, 0.09);
+      border-color: rgba(255, 215, 0, 0.3);
+    }
+
+    .history-item.revoked {
+      opacity: 0.5;
+      text-decoration: line-through;
+    }
+
+    .item-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+
+    .item-prize {
+      font-size: 12px;
+      font-weight: 800;
+      color: #FFD700;
+      background: rgba(255, 215, 0, 0.15);
+      padding: 2px 8px;
+      border-radius: 6px;
+    }
+
+    .item-time {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .item-name {
+      font-size: 16px;
+      font-weight: 800;
+      color: #fff;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .item-meta {
+      font-size: 12.5px;
+      color: var(--text-muted);
+      margin-top: 3px;
+    }
+
+    /* Responsive */
+    @media (max-width: 1024px) {
+      .lottery-main {
+        flex-direction: column;
+        padding: 16px;
+      }
+      .history-sidebar {
+        width: 100%;
+        max-height: 280px;
+      }
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Ambient Lights -->
+  <div class="ambient-light light-1"></div>
+  <div class="ambient-light light-2"></div>
+
+  <!-- Confetti Canvas -->
+  <canvas id="confettiCanvas"></canvas>
+
+  <!-- Top Header Bar -->
+  <header class="lottery-header">
+    <div class="brand-group">
+      <div class="brand-icon">🎁</div>
+      <div class="brand-title">
+        <h1>InPoint <span>現場大抽獎</span></h1>
+        <p id="headerEventName">大會專屬舞台大螢幕 ‧ 即時震撼連動</p>
+      </div>
+    </div>
+
+    <div class="header-actions">
+      <div class="status-badge" id="signalrStatusBadge">
+        <span class="status-dot"></span>
+        <span id="signalrStatusText">連線待命中 (等待後台指令)</span>
+      </div>
+
+      <button type="button" class="btn-action" onclick="toggleNameMask()" id="maskToggleBtn" title="姓名遮蔽切換">
+        <span>🔒 遮蔽姓名：開啟</span>
+      </button>
+
+      <button type="button" class="btn-action" onclick="toggleSound()" id="soundToggleBtn" title="音效開關">
+        <span>🔊 音效：開啟</span>
+      </button>
+
+      <button type="button" class="btn-action" onclick="toggleFullScreen()" title="全螢幕模式 (F11)">
+        <span>⛶ 全螢幕</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Work Stage -->
+  <main class="lottery-main">
+
+    <!-- Central Stage Area -->
+    <div class="stage-area" id="stageArea">
+
+      <!-- Stage Top Live Stat Pill -->
+      <div class="stage-info-strip">
+        <div class="info-item">
+          <span class="label">現場已報到抽獎庫：</span>
+          <span class="val" id="statCheckedInCount">0</span>
+          <span style="font-size: 12px; color: var(--text-muted);">人</span>
+        </div>
+        <div style="width: 1px; height: 14px; background: rgba(255,255,255,0.2);"></div>
+        <div class="info-item">
+          <span class="label">目前獎項名額：</span>
+          <span class="val" id="statTargetQuantity">-</span>
+          <span style="font-size: 12px; color: var(--text-muted);">位</span>
+        </div>
+        <div style="width: 1px; height: 14px; background: rgba(255,255,255,0.2);"></div>
+        <div class="info-item">
+          <span class="label">已累計中獎：</span>
+          <span class="val" id="statTotalWinners">0</span>
+          <span style="font-size: 12px; color: var(--text-muted);">人</span>
+        </div>
+      </div>
+
+      <!-- 1. IDLE VIEW -->
+      <div class="view-idle" id="viewIdle">
+        <div class="idle-icon-wrap">🎁</div>
+        <div class="idle-title">幸運大抽獎 · 榮耀登場</div>
+        <div class="idle-subtitle">
+          大會 100% 針對現場「已完成報到」名單公平公開隨機抽選<br>
+          後台作業端點擊【開始抽獎】即可同步觸發大螢幕滾動開獎！
+        </div>
+        <div class="idle-current-prize-card" id="idlePrizeCard" style="display: none;">
+          <span>🏆 當前準備抽出：</span>
+          <span id="idlePrizeName"></span>
+        </div>
+      </div>
+
+      <!-- 2. SPINNING VIEW (高速旋轉老虎機) -->
+      <div class="view-spinning" id="viewSpinning">
+        <div class="spin-target-prize">
+          <span>✨ 正在抽出：</span>
+          <span id="spinPrizeName">頭獎 - iPhone 16</span>
+          <span style="font-size: 16px; color: #FFEAA7;" id="spinQuantityBadge">(抽出 1 位)</span>
+        </div>
+
+        <div class="slot-machine-frame">
+          <div class="slot-indicator-line"></div>
+          <div class="slot-rolling-card" id="slotRollingCard">
+            <span id="slotName">幸運貴賓</span>
+            <span class="slot-rolling-meta" id="slotMeta">單位 · 席位</span>
+          </div>
+        </div>
+
+        <div class="spin-status-note">
+          <span class="status-dot" style="background: #F1C40F; box-shadow: 0 0 10px #F1C40F;"></span>
+          <span>大螢幕高速抽選中，等待後台開獎信號揭曉...</span>
+        </div>
+      </div>
+
+      <!-- 3. REVEALED VIEW (揭曉得獎結果) -->
+      <div class="view-revealed" id="viewRevealed">
+        <div class="reveal-header-badge">🎉 恭喜幸運得獎者 🎉</div>
+        <div class="reveal-prize-title" id="revealPrizeTitle">【頭獎 - 戴森頂級吹風機】</div>
+
+        <div class="winners-grid" id="winnersGrid">
+          <!-- Dynamic Winner Cards -->
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Right Sidebar: Winner History -->
+    <aside class="history-sidebar">
+      <div class="history-header">
+        <div class="history-title">
+          <span>🏆 榮譽得獎榜</span>
+        </div>
+        <span class="history-count" id="historyCount">0 位得獎</span>
+      </div>
+
+      <div class="history-list" id="historyList">
+        <!-- Dynamic History Items -->
+        <div style="text-align: center; color: var(--text-muted); font-size: 13px; padding: 30px 10px;">
+          尚無中獎紀錄<br>等待第一位幸運貴賓誕生！
+        </div>
+      </div>
+    </aside>
+
+  </main>
+
+  <!-- SignalR CDN Library -->
+  <script src="https://cdn.jsdelivr.net/npm/@microsoft/signalr@8.0.7/dist/browser/signalr.min.js"></script>
+
+  <script>
+    // =========================================================================
+    // INPOINT LOTTERY BIG SCREEN CONTROLLER
+    // =========================================================================
+
+    let currentEventId = '';
+    let currentEventName = '';
+    let isNameMasked = localStorage.getItem('inpoint_lottery_masked') !== 'false';
+    let isSoundEnabled = true;
+    let signalrConn = null;
+    let rollingTimer = null;
+    let candidatePool = [];
+    let historyWinners = [];
+    let audioCtx = null;
+
+    // Web Audio API Sound Synthesizer (Zero External Dependencies)
+    function initAudio() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+    }
+
+    function playTickSound() {
+      if (!isSoundEnabled) return;
+      try {
+        initAudio();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(600 + Math.random() * 300, audioCtx.currentTime);
+        gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.05);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.05);
+      } catch (e) {}
+    }
+
+    function playWinFanfare() {
+      if (!isSoundEnabled) return;
+      try {
+        initAudio();
+        const notes = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
+        notes.forEach((freq, i) => {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = 'square';
+          osc.frequency.setValueAtTime(freq, audioCtx.currentTime + i * 0.12);
+          gain.gain.setValueAtTime(0.12, audioCtx.currentTime + i * 0.12);
+          gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + i * 0.12 + 0.6);
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start(audioCtx.currentTime + i * 0.12);
+          osc.stop(audioCtx.currentTime + i * 0.12 + 0.6);
+        });
+      } catch (e) {}
+    }
+
+    // Name Masking Utility
+    function maskName(name) {
+      if (!name) return '';
+      if (!isNameMasked) return name;
+      const str = String(name).trim();
+      if (str.length <= 1) return str;
+      if (str.length === 2) return str[0] + '○';
+      if (str.length === 3) return str[0] + '○' + str[2];
+      if (str.length === 4) return str[0] + '○○' + str[3];
+      return str[0] + '○'.repeat(str.length - 2) + str[str.length - 1];
+    }
+
+    function toggleNameMask() {
+      isNameMasked = !isNameMasked;
+      localStorage.setItem('inpoint_lottery_masked', isNameMasked ? 'true' : 'false');
+      const btn = document.getElementById('maskToggleBtn');
+      btn.innerHTML = isNameMasked ? '<span>🔒 遮蔽姓名：開啟</span>' : '<span>👁️ 顯示全名</span>';
+      renderHistoryList();
+    }
+
+    function toggleSound() {
+      isSoundEnabled = !isSoundEnabled;
+      const btn = document.getElementById('soundToggleBtn');
+      btn.innerHTML = isSoundEnabled ? '<span>🔊 音效：開啟</span>' : '<span>🔇 音效：關閉</span>';
+      if (isSoundEnabled) initAudio();
+    }
+
+    function toggleFullScreen() {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(() => {});
+      } else {
+        if (document.exitFullscreen) document.exitFullscreen();
+      }
+    }
+
+    // Parse EventId from URL params or localStorage
+    function getEventIdFromUrl() {
+      const params = new URLSearchParams(window.location.search);
+      return params.get('eventId') || params.get('id') || localStorage.getItem('inpoint_active_event_id') || '';
+    }
+
+    // Initialization
+    async function initLotteryScreen() {
+      currentEventId = getEventIdFromUrl();
+      toggleNameMask(); // synchronize initial UI
+      toggleNameMask();
+
+      await fetchEventDetails();
+      await fetchLotteryStatus();
+
+      setupSignalR();
+      setupBroadcastChannel();
+
+      // Fallback Polling (Every 4 seconds)
+      setInterval(fetchLotteryStatus, 4000);
+
+      // 啟動榮譽得獎榜自動持續平滑捲動
+      initHistoryAutoScroll();
+    }
+
+    async function fetchEventDetails() {
+      try {
+        const res = await fetch(`/api/events/public-list?t=${Date.now()}`);
+        if (res.ok) {
+          const events = await res.json();
+          const target = events.find(e => e.eventId === currentEventId) || events[0];
+          if (target) {
+            currentEventId = target.eventId;
+            currentEventName = target.eventName;
+            document.getElementById('headerEventName').textContent = `${target.eventName} ‧ 現場大抽獎舞台`;
+          }
+        }
+      } catch (e) {}
+    }
+
+    async function fetchLotteryStatus() {
+      if (!currentEventId) return;
+      try {
+        const token = sessionStorage.getItem('inpoint_token') || localStorage.getItem('inpoint_token') || '';
+        const headers = {};
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+
+        const res = await fetch(`/api/lottery/status?eventId=${encodeURIComponent(currentEventId)}&t=${Date.now()}`, {
+          headers: headers
+        });
+        if (res.ok) {
+          const data = await res.json();
+          document.getElementById('statCheckedInCount').textContent = data.totalCheckedIn || 0;
+          if (data.totalWinners !== undefined) {
+            document.getElementById('statTotalWinners').textContent = data.totalWinners;
+          }
+
+          const idlePrizeCard = document.getElementById('idlePrizeCard');
+          const idlePrizeName = document.getElementById('idlePrizeName');
+          if (data.prizes && data.prizes.length > 0 && data.prizes[0].prizeName) {
+            if (idlePrizeName) idlePrizeName.textContent = data.prizes[0].prizeName;
+            if (idlePrizeCard) idlePrizeCard.style.display = 'inline-flex';
+          } else {
+            // 首次執行或無預排獎項時，不需填寫/呈現
+            if (idlePrizeCard) idlePrizeCard.style.display = 'none';
+          }
+
+          if (data.winners && Array.isArray(data.winners)) {
+            historyWinners = data.winners;
+            renderHistoryList();
+            const activeList = historyWinners.filter(w => !w.isRevoked);
+            document.getElementById('statTotalWinners').textContent = activeList.length;
+          }
+        }
+      } catch (e) {}
+    }
+
+    // SignalR Setup
+    function setupSignalR() {
+      if (typeof signalR === 'undefined') {
+        updateSignalRBadge(false, 'SignalR 離線模式 (啟用廣播備援)');
+        return;
+      }
+
+      signalrConn = new signalR.HubConnectionBuilder()
+        .withUrl('/hub/checkin')
+        .withAutomaticReconnect([0, 2000, 5000, 10000])
+        .build();
+
+      signalrConn.on('OnLotterySpinStarted', (data) => {
+        if (!data || (data.eventId && data.eventId !== currentEventId)) return;
+        startSpinningAnimation(data);
+      });
+
+      signalrConn.on('OnLotteryDrawn', (data) => {
+        if (!data || (data.eventId && data.eventId !== currentEventId)) return;
+        revealWinners(data);
+      });
+
+      signalrConn.on('OnLotteryWinnerRevoked', (data) => {
+        if (!data || (data.eventId && data.eventId !== currentEventId)) return;
+        if (data.winnerId) {
+          const target = historyWinners.find(w => (w.winnerId || w.WinnerId) === data.winnerId);
+          if (target) {
+            target.isRevoked = true;
+            renderHistoryList();
+            const activeList = historyWinners.filter(w => !w.isRevoked);
+            document.getElementById('statTotalWinners').textContent = activeList.length;
+          }
+        }
+        fetchLotteryStatus();
+      });
+
+      signalrConn.on('OnLotteryReset', (data) => {
+        if (!data || (data.eventId && data.eventId !== currentEventId)) return;
+        historyWinners = [];
+        renderHistoryList();
+        document.getElementById('statTotalWinners').textContent = 0;
+        resetToIdle();
+        fetchLotteryStatus();
+      });
+
+      signalrConn.start().then(() => {
+        updateSignalRBadge(true, '🟢 即時連線中 (舞台待命)');
+        if (currentEventId) {
+          signalrConn.invoke('JoinEvent', currentEventId).catch(() => {});
+        }
+      }).catch(() => {
+        updateSignalRBadge(false, '廣播通道同步中');
+      });
+
+      signalrConn.onreconnecting(() => updateSignalRBadge(false, '重新連線中...'));
+      signalrConn.onreconnected(() => {
+        updateSignalRBadge(true, '🟢 即時連線已恢復');
+        if (currentEventId) signalrConn.invoke('JoinEvent', currentEventId).catch(() => {});
+      });
+    }
+
+    // Local Broadcast Channel Fallback (Instant Cross-Tab Sync)
+    function setupBroadcastChannel() {
+      if (typeof BroadcastChannel !== 'undefined') {
+        const bc = new BroadcastChannel('inpoint_lottery_channel');
+        bc.onmessage = (event) => {
+          const msg = event.data;
+          if (!msg) return;
+          if (msg.type === 'START_SPIN') {
+            startSpinningAnimation(msg.payload);
+          } else if (msg.type === 'DRAW_WINNERS') {
+            revealWinners(msg.payload);
+          } else if (msg.type === 'RESET') {
+            historyWinners = [];
+            renderHistoryList();
+            document.getElementById('statTotalWinners').textContent = 0;
+            resetToIdle();
+            fetchLotteryStatus();
+          } else if (msg.type === 'REVOKE_WINNER') {
+            if (msg.payload && msg.payload.winnerId) {
+              const target = historyWinners.find(w => (w.winnerId || w.WinnerId) === msg.payload.winnerId);
+              if (target) {
+                target.isRevoked = true;
+                renderHistoryList();
+                const activeList = historyWinners.filter(w => !w.isRevoked);
+                document.getElementById('statTotalWinners').textContent = activeList.length;
+              }
+            }
+            fetchLotteryStatus();
+          }
+        };
+      }
+    }
+
+    function updateSignalRBadge(online, text) {
+      const badge = document.getElementById('signalrStatusBadge');
+      const label = document.getElementById('signalrStatusText');
+      if (label) label.textContent = text;
+      if (badge) {
+        badge.style.borderColor = online ? 'rgba(46, 204, 113, 0.35)' : 'rgba(241, 196, 15, 0.4)';
+        badge.style.color = online ? '#A3E9C4' : '#F7DC6F';
+      }
+    }
+
+    // Animation 1: Start Spinning Slot Machine
+    function startSpinningAnimation(data) {
+      const viewIdle = document.getElementById('viewIdle');
+      const viewSpinning = document.getElementById('viewSpinning');
+      const viewRevealed = document.getElementById('viewRevealed');
+
+      viewIdle.style.display = 'none';
+      viewRevealed.style.display = 'none';
+      viewSpinning.style.display = 'flex';
+
+      const prizeName = data.prizeName || data.PrizeName || '幸運大獎';
+      const quantity = data.quantity || data.Quantity || 1;
+
+      document.getElementById('spinPrizeName').textContent = prizeName;
+      document.getElementById('spinQuantityBadge').textContent = `(抽出 ${quantity} 位)`;
+      document.getElementById('statTargetQuantity').textContent = quantity;
+
+      if (data.sampleCandidates && data.sampleCandidates.length > 0) {
+        candidatePool = data.sampleCandidates;
+      }
+
+      if (rollingTimer) clearInterval(rollingTimer);
+
+      const slotNameEl = document.getElementById('slotName');
+      const slotMetaEl = document.getElementById('slotMeta');
+
+      rollingTimer = setInterval(() => {
+        playTickSound();
+        if (candidatePool.length > 0) {
+          const pick = candidatePool[Math.floor(Math.random() * candidatePool.length)];
+          slotNameEl.textContent = maskName(pick.name || pick.Name);
+          slotMetaEl.textContent = `${pick.organization || pick.Organization || '大會貴賓'} · ${pick.tableNo || pick.TableNo || '貴賓席'}`;
+        } else {
+          const fakeNames = ['陳○宏', '林○美', '黃○峰', '張○儀', '李○華', '王○明', '蔡○豪', '郭○君'];
+          const fakeOrgs = ['心血管醫學部', '秀傳紀念醫院', '創新研發組', '醫療企劃處', '資訊科技中心'];
+          const fakeTables = ['第 3 組', 'VIP-1 主桌', '第 8 組', '第 12 組'];
+          slotNameEl.textContent = fakeNames[Math.floor(Math.random() * fakeNames.length)];
+          slotMetaEl.textContent = `${fakeOrgs[Math.floor(Math.random() * fakeOrgs.length)]} · ${fakeTables[Math.floor(Math.random() * fakeTables.length)]}`;
+        }
+      }, 70);
+    }
+
+    // Animation 2: Reveal Winners
+    function revealWinners(data) {
+      if (rollingTimer) {
+        clearInterval(rollingTimer);
+        rollingTimer = null;
+      }
+
+      const viewIdle = document.getElementById('viewIdle');
+      const viewSpinning = document.getElementById('viewSpinning');
+      const viewRevealed = document.getElementById('viewRevealed');
+
+      viewIdle.style.display = 'none';
+      viewSpinning.style.display = 'none';
+      viewRevealed.style.display = 'flex';
+
+      const prizeName = data.prizeName || data.PrizeName || '得獎者名單';
+      const winners = data.winners || data.Winners || [];
+
+      document.getElementById('revealPrizeTitle').textContent = `【${prizeName}】`;
+
+      const grid = document.getElementById('winnersGrid');
+      grid.innerHTML = '';
+
+      const isSingle = winners.length === 1;
+
+      winners.forEach(w => {
+        const card = document.createElement('div');
+        card.className = `winner-card ${isSingle ? 'single-mode' : ''}`;
+        card.innerHTML = `
+          <div class="winner-crown">👑</div>
+          <div class="winner-name">${escapeHtml(maskName(w.guestName || w.GuestName))}</div>
+          <div class="winner-org-title">
+            <span>${escapeHtml(w.organization || w.Organization || '')}</span>
+            <span>${escapeHtml(w.title || w.Title ? '· ' + (w.title || w.Title) : '')}</span>
+          </div>
+          <div class="winner-table-badge">席位：${escapeHtml(w.tableNo || w.TableNo || '現場安排')}</div>
+        `;
+        grid.appendChild(card);
+      });
+
+      // Sound fanfare & Confetti Blast!
+      playWinFanfare();
+      fireConfetti();
+
+      // 立即將本次得獎者同步寫入歷史榮譽榜（零延遲即時呈現）
+      if (winners && winners.length > 0) {
+        winners.forEach(w => {
+          const wObj = {
+            winnerId: w.winnerId || w.WinnerId || ('w_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7)),
+            prizeName: prizeName,
+            guestName: w.guestName || w.GuestName || w.name || w.Name || '',
+            organization: w.organization || w.Organization || '',
+            title: w.title || w.Title || '',
+            tableNo: w.tableNo || w.TableNo || '',
+            wonAt: w.wonAt || w.WonAt || new Date().toISOString(),
+            isRevoked: false
+          };
+          const exists = historyWinners.some(x => 
+            (x.winnerId && x.winnerId === wObj.winnerId) || 
+            (x.guestName === wObj.guestName && x.prizeName === wObj.prizeName)
+          );
+          if (!exists) {
+            historyWinners.unshift(wObj);
+          }
+        });
+        renderHistoryList();
+        const activeList = historyWinners.filter(w => !w.isRevoked);
+        document.getElementById('statTotalWinners').textContent = activeList.length;
+      }
+
+      // Refresh History via API in background
+      fetchLotteryStatus();
+    }
+
+    function resetToIdle() {
+      if (rollingTimer) {
+        clearInterval(rollingTimer);
+        rollingTimer = null;
+      }
+      document.getElementById('viewSpinning').style.display = 'none';
+      document.getElementById('viewRevealed').style.display = 'none';
+      document.getElementById('viewIdle').style.display = 'flex';
+      
+      const idlePrizeCard = document.getElementById('idlePrizeCard');
+      const idlePrizeName = document.getElementById('idlePrizeName');
+      if (idlePrizeCard && (!idlePrizeName || !idlePrizeName.textContent.trim())) {
+        idlePrizeCard.style.display = 'none';
+      }
+    }
+
+    function renderHistoryList() {
+      const container = document.getElementById('historyList');
+      if (!container) return;
+
+      const activeList = historyWinners.filter(w => !w.isRevoked);
+      document.getElementById('historyCount').textContent = `${activeList.length} 位得獎`;
+
+      if (historyWinners.length === 0) {
+        container.innerHTML = `
+          <div style="text-align: center; color: var(--text-muted); font-size: 13px; padding: 30px 10px;">
+            尚無中獎紀錄<br>等待第一位幸運貴賓誕生！
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = historyWinners.map(w => `
+        <div class="history-item ${w.isRevoked ? 'revoked' : ''}">
+          <div class="item-top">
+            <span class="item-prize">${escapeHtml(w.prizeName)}</span>
+            <span class="item-time">${formatTaiwanTime(w.wonAt)}</span>
+          </div>
+          <div class="item-name">
+            <span>${escapeHtml(maskName(w.guestName))}</span>
+            <span style="font-size: 12px; color: #FFD700;">${w.isRevoked ? '(棄權)' : escapeHtml(w.tableNo || '')}</span>
+          </div>
+          <div class="item-meta">${escapeHtml(w.organization || '')} ${escapeHtml(w.title || '')}</div>
+        </div>
+      `).join('');
+
+      // 名單更新時，短暫置頂 2.5 秒顯示最新抽出者，隨後平滑自動循環捲動
+      pauseHistoryAutoScrollTemporarily(2500);
+    }
+
+    // =========================================================================
+    // 榮譽得獎榜自動平滑持續捲動控制器 (Auto Continuous Smooth Scrolling)
+    // =========================================================================
+    let historyAutoScrollRaf = null;
+    let isHistoryMouseOver = false;
+    let isHistoryScrollPaused = false;
+    let historyScrollPauseTimer = null;
+
+    function initHistoryAutoScroll() {
+      const container = document.getElementById('historyList');
+      if (!container) return;
+
+      container.addEventListener('mouseenter', () => {
+        isHistoryMouseOver = true;
+      });
+      container.addEventListener('mouseleave', () => {
+        isHistoryMouseOver = false;
+      });
+      container.addEventListener('touchstart', () => {
+        isHistoryMouseOver = true;
+      }, { passive: true });
+      container.addEventListener('touchend', () => {
+        setTimeout(() => { isHistoryMouseOver = false; }, 1200);
+      });
+
+      startHistoryAutoScrollLoop();
+    }
+
+    function pauseHistoryAutoScrollTemporarily(ms = 2500) {
+      isHistoryScrollPaused = true;
+      if (historyScrollPauseTimer) clearTimeout(historyScrollPauseTimer);
+      historyScrollPauseTimer = setTimeout(() => {
+        isHistoryScrollPaused = false;
+      }, ms);
+    }
+
+    function startHistoryAutoScrollLoop() {
+      const container = document.getElementById('historyList');
+      if (!container) return;
+
+      if (historyAutoScrollRaf) {
+        cancelAnimationFrame(historyAutoScrollRaf);
+        historyAutoScrollRaf = null;
+      }
+
+      let lastTime = performance.now();
+      const scrollSpeed = 26; // 每秒平滑捲動 26 像素，清晰舒適
+
+      function scrollStep(now) {
+        const delta = Math.min((now - lastTime) / 1000, 0.1);
+        lastTime = now;
+
+        if (!isHistoryMouseOver && !isHistoryScrollPaused && container) {
+          const maxScroll = container.scrollHeight - container.clientHeight;
+          if (maxScroll > 12) { // 超出可視範圍才需要自動捲動
+            const nextScroll = container.scrollTop + scrollSpeed * delta;
+            
+            if (nextScroll >= maxScroll - 1) {
+              container.scrollTop = maxScroll;
+              // 捲動到底部，停留 2.5 秒讓現場人員看清最後名單
+              isHistoryScrollPaused = true;
+              if (historyScrollPauseTimer) clearTimeout(historyScrollPauseTimer);
+              historyScrollPauseTimer = setTimeout(() => {
+                if (container) {
+                  // 平滑回滾至頂部
+                  container.scrollTo({ top: 0, behavior: 'smooth' });
+                  // 回到頂部後停留 2 秒再開始下一輪循環
+                  setTimeout(() => {
+                    isHistoryScrollPaused = false;
+                  }, 2000);
+                } else {
+                  isHistoryScrollPaused = false;
+                }
+              }, 2500);
+            } else {
+              container.scrollTop = nextScroll;
+            }
+          }
+        }
+
+        historyAutoScrollRaf = requestAnimationFrame(scrollStep);
+      }
+
+      historyAutoScrollRaf = requestAnimationFrame(scrollStep);
+    }
+
+    function formatTaiwanTime(dateStr) {
+      if (!dateStr) return '';
+      try {
+        const d = new Date(dateStr);
+        return d.toLocaleTimeString('zh-TW', { hour12: false, hour: '2-digit', minute: '2-digit' });
+      } catch (e) {
+        return '';
+      }
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    // HTML5 Canvas Multi-Color Confetti Physics System
+    function fireConfetti() {
+      const canvas = document.getElementById('confettiCanvas');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+
+      const particles = [];
+      const colors = ['#FFD700', '#FF4D4D', '#2ECC71', '#3498DB', '#9B59B6', '#FFFFFF', '#E67E22'];
+
+      for (let i = 0; i < 220; i++) {
+        particles.push({
+          x: canvas.width / 2,
+          y: canvas.height * 0.45,
+          vx: (Math.random() - 0.5) * 22,
+          vy: (Math.random() - 0.8) * 22,
+          size: Math.random() * 8 + 6,
+          color: colors[Math.floor(Math.random() * colors.length)],
+          rotation: Math.random() * 360,
+          vRot: (Math.random() - 0.5) * 12,
+          gravity: 0.35,
+          alpha: 1
+        });
+      }
+
+      let animationFrame = null;
+      let start = performance.now();
+
+      function update(time) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        let alive = false;
+
+        particles.forEach(p => {
+          p.x += p.vx;
+          p.y += p.vy;
+          p.vy += p.gravity;
+          p.rotation += p.vRot;
+          p.alpha -= 0.0035;
+
+          if (p.alpha > 0 && p.y < canvas.height + 50) {
+            alive = true;
+            ctx.save();
+            ctx.globalAlpha = Math.max(0, p.alpha);
+            ctx.translate(p.x, p.y);
+            ctx.rotate((p.rotation * Math.PI) / 180);
+            ctx.fillStyle = p.color;
+            ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size * 0.7);
+            ctx.restore();
+          }
+        });
+
+        if (alive && performance.now() - start < 5000) {
+          animationFrame = requestAnimationFrame(update);
+        } else {
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          cancelAnimationFrame(animationFrame);
+        }
+      }
+
+      animationFrame = requestAnimationFrame(update);
+    }
+
+    window.addEventListener('resize', () => {
+      const canvas = document.getElementById('confettiCanvas');
+      if (canvas) {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+      }
+    });
+
+    window.addEventListener('DOMContentLoaded', initLotteryScreen);
+  </script>
+</body>
+</html>

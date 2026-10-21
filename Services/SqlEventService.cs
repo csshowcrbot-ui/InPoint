@@ -711,4 +711,193 @@ public class SqlEventService : IEventService
             };
         }
     }
+
+    // =========================================================================
+    // LOTTERY ADDON MODULE (現場抽獎附加功能實作 - SQL)
+    // =========================================================================
+
+    public async Task<bool> HasLotteryAccessAsync(string? username, string eventId)
+    {
+        if (string.Equals(username, "admin", StringComparison.OrdinalIgnoreCase)) return true;
+
+        await using var db = await _dbFactory.CreateDbContextAsync();
+        var ev = await db.Events.FirstOrDefaultAsync(e => e.EventId == eventId);
+        if (ev != null && ev.HasLotteryAddon) return true;
+
+        if (!string.IsNullOrWhiteSpace(username))
+        {
+            var user = await db.Users.FirstOrDefaultAsync(u => u.Username == username);
+            if (user != null && (user.Role == "Admin" || user.HasLotteryAddon)) return true;
+        }
+
+        return false;
+    }
+
+    public async Task<bool> AuthorizeLotteryAddonAsync(string username, string? eventId)
+    {
+        await using var db = await _dbFactory.CreateDbContextAsync();
+        if (!string.IsNullOrWhiteSpace(username))
+        {
+            var user = await db.Users.FirstOrDefaultAsync(u => u.Username == username);
+            if (user != null)
+            {
+                user.HasLotteryAddon = true;
+                user.LotteryAuthorizedAt = DateTime.UtcNow;
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(eventId))
+        {
+            var ev = await db.Events.FirstOrDefaultAsync(e => e.EventId == eventId);
+            if (ev != null)
+            {
+                ev.HasLotteryAddon = true;
+            }
+        }
+
+        await db.SaveChangesAsync();
+        return true;
+    }
+
+    public async Task<List<Guest>> GetEligibleLotteryGuestsAsync(string eventId, bool excludePreviousWinners = true)
+    {
+        await using var db = await _dbFactory.CreateDbContextAsync();
+        // 嚴格只針對現場已完成報到名單
+        var query = db.Guests.Where(g => g.EventId == eventId && g.IsCheckedIn);
+
+        if (excludePreviousWinners)
+        {
+            var winnerGuestIds = await db.LotteryWinners
+                .Where(w => w.EventId == eventId && !w.IsRevoked)
+                .Select(w => w.GuestId)
+                .ToListAsync();
+
+            if (winnerGuestIds.Count > 0)
+            {
+                query = query.Where(g => !winnerGuestIds.Contains(g.GuestId));
+            }
+        }
+
+        return await query.ToListAsync();
+    }
+
+    public async Task<List<LotteryPrize>> GetLotteryPrizesAsync(string eventId)
+    {
+        await using var db = await _dbFactory.CreateDbContextAsync();
+        return await db.LotteryPrizes
+            .Where(p => p.EventId == eventId)
+            .OrderBy(p => p.DisplayOrder)
+            .ThenBy(p => p.CreatedAt)
+            .ToListAsync();
+    }
+
+    public async Task<LotteryPrize> CreateLotteryPrizeAsync(LotteryPrize prize)
+    {
+        await using var db = await _dbFactory.CreateDbContextAsync();
+        if (string.IsNullOrWhiteSpace(prize.PrizeId))
+        {
+            prize.PrizeId = $"prize_{TaiwanTime.Now:yyyyMMdd_HHmmss}_{Guid.NewGuid().ToString("N")[..6]}";
+        }
+        prize.CreatedAt = DateTime.UtcNow;
+        db.LotteryPrizes.Add(prize);
+        await db.SaveChangesAsync();
+        return prize;
+    }
+
+    public async Task<bool> DeleteLotteryPrizeAsync(string eventId, string prizeId)
+    {
+        await using var db = await _dbFactory.CreateDbContextAsync();
+        var item = await db.LotteryPrizes.FirstOrDefaultAsync(p => p.EventId == eventId && p.PrizeId == prizeId);
+        if (item != null)
+        {
+            db.LotteryPrizes.Remove(item);
+            await db.SaveChangesAsync();
+            return true;
+        }
+        return false;
+    }
+
+    public async Task<List<LotteryWinner>> GetLotteryWinnersAsync(string eventId)
+    {
+        await using var db = await _dbFactory.CreateDbContextAsync();
+        return await db.LotteryWinners
+            .Where(w => w.EventId == eventId)
+            .OrderByDescending(w => w.WonAt)
+            .ToListAsync();
+    }
+
+    public async Task<List<LotteryWinner>> DrawLotteryAsync(string eventId, string prizeName, int quantity, bool excludePreviousWinners = true, string? prizeId = null)
+    {
+        var eligibleGuests = await GetEligibleLotteryGuestsAsync(eventId, excludePreviousWinners);
+        if (eligibleGuests.Count == 0 || quantity <= 0)
+        {
+            return new List<LotteryWinner>();
+        }
+
+        var shuffled = eligibleGuests.OrderBy(_ => Random.Shared.Next()).ToList();
+        var selectedCount = Math.Min(quantity, shuffled.Count);
+        var chosenGuests = shuffled.Take(selectedCount).ToList();
+
+        var newWinners = new List<LotteryWinner>();
+        await using var db = await _dbFactory.CreateDbContextAsync();
+
+        foreach (var guest in chosenGuests)
+        {
+            var winner = new LotteryWinner
+            {
+                WinnerId = $"win_{TaiwanTime.Now:yyyyMMdd_HHmmss}_{Guid.NewGuid().ToString("N")[..6]}",
+                EventId = eventId,
+                PrizeId = prizeId,
+                PrizeName = prizeName,
+                GuestId = guest.GuestId,
+                GuestName = guest.Name,
+                Organization = guest.Organization,
+                Title = guest.Title,
+                TableNo = guest.TableNo,
+                WonAt = DateTime.UtcNow,
+                IsRevoked = false
+            };
+            db.LotteryWinners.Add(winner);
+            newWinners.Add(winner);
+        }
+
+        await db.SaveChangesAsync();
+        return newWinners;
+    }
+
+    public async Task<bool> RevokeLotteryWinnerAsync(string eventId, string winnerId)
+    {
+        if (string.IsNullOrWhiteSpace(winnerId)) return false;
+        await using var db = await _dbFactory.CreateDbContextAsync();
+        
+        LotteryWinner? item = null;
+        if (!string.IsNullOrWhiteSpace(eventId))
+        {
+            item = await db.LotteryWinners.FirstOrDefaultAsync(w => w.EventId == eventId && w.WinnerId == winnerId);
+        }
+        if (item == null)
+        {
+            item = await db.LotteryWinners.FirstOrDefaultAsync(w => w.WinnerId == winnerId);
+        }
+
+        if (item != null)
+        {
+            item.IsRevoked = true;
+            await db.SaveChangesAsync();
+            return true;
+        }
+        return false;
+    }
+
+    public async Task<bool> ClearLotteryWinnersAsync(string eventId)
+    {
+        await using var db = await _dbFactory.CreateDbContextAsync();
+        var items = await db.LotteryWinners.Where(w => w.EventId == eventId).ToListAsync();
+        if (items.Count > 0)
+        {
+            db.LotteryWinners.RemoveRange(items);
+            await db.SaveChangesAsync();
+        }
+        return true;
+    }
 }
