@@ -5,18 +5,71 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>現場大抽獎 · 震撼大螢幕舞台 | InPoint Live Lottery</title>
   <meta name="description" content="InPoint 智慧活動報到與現場抽獎大螢幕展示系統 - 100% 針對現場已報到貴賓抽獎，雙端即時連動、震撼光影彩帶與得獎唱名。" />
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎁</text></svg>" />
+  <!-- Google Fonts: 日系典雅宋體、極簡思源黑體與經典西文字型 -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=Noto+Serif+TC:wght@500;600;700;900&family=Noto+Sans+TC:wght@400;500;600;700&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg-gradient: radial-gradient(circle at 50% 20%, #153e2e 0%, #0c231a 50%, #05100b 100%);
-      --gold-primary: #FFD700;
-      --gold-glow: rgba(255, 215, 0, 0.45);
-      --gold-dark: #B8860B;
-      --forest-bright: #2ECC71;
-      --glass-panel: rgba(255, 255, 255, 0.07);
-      --glass-border: rgba(255, 255, 255, 0.15);
-      --text-main: #FFFFFF;
-      --text-muted: #A3D4BE;
+      /* 日系極簡・和紙米白主題 (Default: Washi Ivory Minimalist) */
+      --bg-base: #F8F7F3;
+      --bg-gradient: radial-gradient(circle at 50% 12%, #FFFFFF 0%, #F5F3EB 60%, #EBE7DC 100%);
+      --header-bg: rgba(255, 255, 255, 0.92);
+      --header-border: rgba(0, 0, 0, 0.06);
+      --stage-bg: #FFFFFF;
+      --stage-border: rgba(0, 0, 0, 0.06);
+      --sidebar-bg: #FFFFFF;
+      --sidebar-border: rgba(0, 0, 0, 0.06);
+      --card-bg: #FAFAF7;
+      --card-border: rgba(0, 0, 0, 0.06);
+      --card-hover-border: #C93B3B;
+      --text-main: #1D1D1F;
+      --text-muted: #6E6E73;
+      --text-light: #9E9E9C;
+      --accent-red: #C93B3B; /* 日本鳥居緋紅 / 祝儀朱赤印 */
+      --accent-red-bg: rgba(201, 59, 59, 0.08);
+      --accent-gold: #B88B4A; /* 和風山吹金 / 香檳啞金 */
+      --accent-gold-bg: rgba(184, 139, 74, 0.1);
+      --accent-green: #3D7E5A; /* 和風常磐綠 */
+      --accent-green-bg: rgba(61, 126, 90, 0.1);
+      --pill-bg: #F2EFE9;
+      --pill-border: rgba(0, 0, 0, 0.05);
+      --mask-fade-color: #FFFFFF;
+      --shadow-soft: 0 10px 36px rgba(45, 35, 25, 0.05);
+      --shadow-card: 0 4px 18px rgba(45, 35, 25, 0.04);
+      --slot-bg: #F8F7F3;
+      --slot-border: rgba(201, 59, 59, 0.2);
+    }
+
+    [data-theme="dark"] {
+      /* 枯山水・侘寂玄墨模式 (Japanese Zen Charcoal) */
+      --bg-base: #131416;
+      --bg-gradient: radial-gradient(circle at 50% 15%, #202226 0%, #17181A 65%, #0F1011 100%);
+      --header-bg: rgba(22, 23, 26, 0.92);
+      --header-border: rgba(255, 255, 255, 0.08);
+      --stage-bg: #1A1C1F;
+      --stage-border: rgba(255, 255, 255, 0.08);
+      --sidebar-bg: #1A1C1F;
+      --sidebar-border: rgba(255, 255, 255, 0.08);
+      --card-bg: rgba(255, 255, 255, 0.035);
+      --card-border: rgba(255, 255, 255, 0.07);
+      --card-hover-border: #E05353;
+      --text-main: #F4F4F6;
+      --text-muted: #9C9CA4;
+      --text-light: #6E6E78;
+      --accent-red: #E05353;
+      --accent-red-bg: rgba(224, 83, 83, 0.15);
+      --accent-gold: #D8A658;
+      --accent-gold-bg: rgba(216, 166, 88, 0.15);
+      --accent-green: #4EA374;
+      --accent-green-bg: rgba(78, 163, 116, 0.15);
+      --pill-bg: rgba(255, 255, 255, 0.06);
+      --pill-border: rgba(255, 255, 255, 0.1);
+      --mask-fade-color: #1A1C1F;
+      --shadow-soft: 0 12px 40px rgba(0, 0, 0, 0.35);
+      --shadow-card: 0 6px 20px rgba(0, 0, 0, 0.25);
+      --slot-bg: #111214;
+      --slot-border: rgba(216, 166, 88, 0.35);
     }
 
     * {
@@ -25,47 +78,58 @@
       padding: 0;
     }
 
-    body {
-      background: var(--bg-gradient);
-      color: var(--text-main);
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", sans-serif;
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      overflow-x: hidden;
-      user-select: none;
-      position: relative;
+    html, body {
+      height: 100vh;
+      max-height: 100vh;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
     }
 
-    /* Ambient Animated Background Lights */
+    body {
+      background: var(--bg-gradient);
+      background-color: var(--bg-base);
+      color: var(--text-main);
+      font-family: "Outfit", "Noto Sans TC", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      height: 100vh;
+      max-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      user-select: none;
+      position: relative;
+      transition: background 0.4s ease, color 0.4s ease;
+    }
+
+    /* 宣紙微光 Ambient Light */
     .ambient-light {
       position: absolute;
       border-radius: 50%;
-      filter: blur(100px);
+      filter: blur(120px);
       pointer-events: none;
       z-index: 0;
-      opacity: 0.25;
-      animation: floatLight 12s infinite alternate ease-in-out;
+      opacity: 0.18;
+      animation: floatLight 16s infinite alternate ease-in-out;
     }
     .light-1 {
-      width: 450px;
-      height: 450px;
-      background: #2ECC71;
-      top: -100px;
-      left: 10%;
-    }
-    .light-2 {
       width: 500px;
       height: 500px;
-      background: #F1C40F;
-      bottom: -150px;
-      right: 15%;
-      animation-delay: -6s;
+      background: var(--accent-gold);
+      top: -120px;
+      left: 15%;
+    }
+    .light-2 {
+      width: 550px;
+      height: 550px;
+      background: var(--accent-red);
+      bottom: -160px;
+      right: 12%;
+      animation-delay: -8s;
+      opacity: 0.12;
     }
 
     @keyframes floatLight {
       0% { transform: translate(0, 0) scale(1); }
-      100% { transform: translate(40px, 30px) scale(1.15); }
+      100% { transform: translate(30px, 20px) scale(1.1); }
     }
 
     /* Confetti Canvas */
@@ -79,109 +143,111 @@
       z-index: 999;
     }
 
-    /* Header Bar */
+    /* Header Bar - 日式極簡清爽導覽 */
     .lottery-header {
-      padding: 18px 36px;
+      padding: 16px 36px;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      background: rgba(8, 26, 18, 0.75);
+      background: var(--header-bg);
       backdrop-filter: blur(16px);
-      border-bottom: 1px solid var(--glass-border);
+      border-bottom: 1px solid var(--header-border);
       position: relative;
       z-index: 10;
+      transition: all 0.3s ease;
     }
 
     .brand-group {
       display: flex;
       align-items: center;
-      gap: 16px;
+      gap: 14px;
     }
 
     .brand-icon {
-      width: 48px;
-      height: 48px;
-      background: linear-gradient(135deg, #FFD700, #B8860B);
-      border-radius: 14px;
+      width: 44px;
+      height: 44px;
+      background: var(--pill-bg);
+      border: 1px solid var(--header-border);
+      border-radius: 12px;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 26px;
-      box-shadow: 0 4px 18px rgba(255, 215, 0, 0.4);
-      animation: spinGlow 4s infinite ease-in-out;
-    }
-
-    @keyframes spinGlow {
-      0%, 100% { transform: scale(1); box-shadow: 0 4px 18px rgba(255, 215, 0, 0.4); }
-      50% { transform: scale(1.05); box-shadow: 0 4px 26px rgba(255, 215, 0, 0.7); }
+      font-size: 22px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
     }
 
     .brand-title h1 {
-      font-size: 24px;
-      font-weight: 800;
-      letter-spacing: 0.5px;
+      font-family: "Noto Serif TC", "Yu Mincho", serif;
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      color: var(--text-main);
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 10px;
       margin: 0;
     }
 
     .brand-title p {
-      font-size: 13px;
+      font-size: 12.5px;
       color: var(--text-muted);
+      letter-spacing: 0.8px;
       margin-top: 2px;
     }
 
     .header-actions {
       display: flex;
       align-items: center;
-      gap: 14px;
+      gap: 10px;
     }
 
     .status-badge {
       display: inline-flex;
       align-items: center;
       gap: 8px;
-      background: rgba(46, 204, 113, 0.15);
-      border: 1px solid rgba(46, 204, 113, 0.35);
+      background: var(--accent-green-bg);
+      border: 1px solid rgba(61, 126, 90, 0.25);
       padding: 6px 14px;
       border-radius: 30px;
-      font-size: 13px;
+      font-size: 12.5px;
       font-weight: 600;
-      color: #A3E9C4;
+      color: var(--accent-green);
     }
 
     .status-dot {
-      width: 9px;
-      height: 9px;
+      width: 8px;
+      height: 8px;
       border-radius: 50%;
-      background: #2ECC71;
-      box-shadow: 0 0 10px #2ECC71;
-      animation: blink 1.6s infinite ease-in-out;
+      background: var(--accent-green);
+      box-shadow: 0 0 8px var(--accent-green);
+      animation: blink 1.8s infinite ease-in-out;
     }
 
     @keyframes blink {
       0%, 100% { opacity: 1; transform: scale(1); }
-      50% { opacity: 0.4; transform: scale(0.85); }
+      50% { opacity: 0.35; transform: scale(0.85); }
     }
 
     .btn-action {
-      background: var(--glass-panel);
-      border: 1px solid var(--glass-border);
-      color: #fff;
-      padding: 8px 16px;
-      border-radius: 10px;
-      font-size: 13.5px;
-      font-weight: 600;
+      background: var(--stage-bg);
+      border: 1px solid var(--header-border);
+      color: var(--text-main);
+      padding: 7px 15px;
+      border-radius: 24px;
+      font-size: 13px;
+      font-weight: 500;
+      letter-spacing: 0.4px;
       cursor: pointer;
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      transition: all 0.2s ease;
+      box-shadow: var(--shadow-card);
+      transition: all 0.25s ease;
     }
 
     .btn-action:hover {
-      background: rgba(255, 255, 255, 0.16);
+      background: var(--pill-bg);
+      border-color: rgba(0, 0, 0, 0.15);
       transform: translateY(-1px);
     }
 
@@ -191,59 +257,67 @@
       display: flex;
       position: relative;
       z-index: 5;
-      padding: 24px 36px 36px 36px;
-      gap: 28px;
+      padding: 20px 32px 28px 32px;
+      gap: 24px;
+      height: calc(100vh - 76px);
+      max-height: calc(100vh - 76px);
+      min-height: 0;
+      overflow: hidden;
+      box-sizing: border-box;
     }
 
-    /* Stage Area (Left/Center) */
+    /* Stage Area (Left/Center) - 日式白木懸浮主展台 */
     .stage-area {
       flex: 1;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      min-height: 580px;
-      background: rgba(12, 38, 27, 0.55);
-      border: 1px solid var(--glass-border);
+      height: 100%;
+      min-height: 0;
+      background: var(--stage-bg);
+      border: 1px solid var(--stage-border);
       border-radius: 24px;
-      backdrop-filter: blur(14px);
       padding: 32px 24px;
       position: relative;
-      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.3);
+      box-shadow: var(--shadow-soft);
       overflow: hidden;
+      transition: all 0.3s ease;
     }
 
-    /* Stage Top Info Strip */
+    /* Stage Top Info Strip - 日系簡約數據橫軸 */
     .stage-info-strip {
       position: absolute;
       top: 24px;
       display: flex;
       align-items: center;
-      gap: 20px;
-      background: rgba(0, 0, 0, 0.35);
-      border: 1px solid rgba(255, 215, 0, 0.25);
-      padding: 10px 24px;
-      border-radius: 50px;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+      gap: 18px;
+      background: var(--pill-bg);
+      border: 1px solid var(--pill-border);
+      padding: 8px 22px;
+      border-radius: 40px;
     }
 
     .info-item {
       display: flex;
       align-items: center;
-      gap: 8px;
-      font-size: 14px;
+      gap: 6px;
+      font-size: 13.5px;
     }
 
     .info-item .label {
       color: var(--text-muted);
+      letter-spacing: 0.5px;
     }
 
     .info-item .val {
-      font-weight: 800;
-      color: #FFD700;
+      font-family: "Cinzel", "Noto Serif TC", serif;
+      font-weight: 700;
+      color: var(--accent-red);
+      font-size: 15px;
     }
 
-    /* Idle View */
+    /* 1. Idle View - 日式水引祈願待命 */
     .view-idle {
       display: flex;
       flex-direction: column;
@@ -253,86 +327,86 @@
     }
 
     .idle-icon-wrap {
-      width: 140px;
-      height: 140px;
-      background: radial-gradient(circle, rgba(255, 215, 0, 0.2) 0%, rgba(255, 215, 0, 0.02) 70%);
-      border: 2px dashed rgba(255, 215, 0, 0.4);
+      width: 120px;
+      height: 120px;
+      background: var(--accent-red-bg);
+      border: 1px solid rgba(201, 59, 59, 0.25);
       border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 64px;
-      margin-bottom: 24px;
-      box-shadow: 0 0 40px rgba(255, 215, 0, 0.2);
+      font-size: 50px;
+      margin-bottom: 22px;
+      box-shadow: 0 8px 24px rgba(201, 59, 59, 0.08);
       animation: pulseIdle 4s infinite ease-in-out;
     }
 
     @keyframes pulseIdle {
-      0%, 100% { transform: scale(1); box-shadow: 0 0 30px rgba(255, 215, 0, 0.2); }
-      50% { transform: scale(1.06); box-shadow: 0 0 50px rgba(255, 215, 0, 0.45); }
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.05); }
     }
 
     .idle-title {
-      font-size: 38px;
-      font-weight: 900;
-      letter-spacing: 2px;
-      background: linear-gradient(135deg, #FFFFFF, #FFD700);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
+      font-family: "Noto Serif TC", "Yu Mincho", serif;
+      font-size: 34px;
+      font-weight: 700;
+      letter-spacing: 3px;
+      color: var(--text-main);
       margin-bottom: 12px;
     }
 
     .idle-subtitle {
-      font-size: 17px;
-      color: #C1E1D2;
-      max-width: 540px;
-      line-height: 1.6;
+      font-size: 15.5px;
+      color: var(--text-muted);
+      max-width: 520px;
+      line-height: 1.7;
+      letter-spacing: 0.6px;
       margin-bottom: 24px;
     }
 
     .idle-current-prize-card {
-      background: linear-gradient(135deg, rgba(255, 215, 0, 0.15), rgba(46, 204, 113, 0.1));
-      border: 1px solid rgba(255, 215, 0, 0.4);
-      padding: 14px 28px;
-      border-radius: 16px;
+      background: var(--pill-bg);
+      border: 1px solid var(--pill-border);
+      padding: 12px 24px;
+      border-radius: 30px;
       display: inline-flex;
       align-items: center;
-      gap: 12px;
-      font-size: 18px;
-      font-weight: 700;
-      color: #FFEA79;
-      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+      gap: 10px;
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--accent-gold);
     }
 
-    /* Spinning Slot Machine View */
+    /* 2. Spinning View - 日式神籤字軸抽獎 */
     .view-spinning {
       display: none;
       flex-direction: column;
       align-items: center;
       text-align: center;
       width: 100%;
-      max-width: 800px;
+      max-width: 760px;
       animation: fadeIn 0.4s ease;
     }
 
     .spin-target-prize {
-      font-size: 26px;
-      font-weight: 800;
-      color: #FFD700;
-      margin-bottom: 20px;
+      font-family: "Noto Serif TC", serif;
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--accent-red);
+      letter-spacing: 1.5px;
+      margin-bottom: 22px;
       display: flex;
       align-items: center;
       gap: 10px;
-      text-shadow: 0 0 15px rgba(255, 215, 0, 0.5);
     }
 
     .slot-machine-frame {
       width: 100%;
-      height: 240px;
-      background: #061810;
-      border: 3px solid #FFD700;
+      height: 220px;
+      background: var(--slot-bg);
+      border: 1px solid var(--slot-border);
       border-radius: 20px;
-      box-shadow: 0 0 35px rgba(255, 215, 0, 0.5), inset 0 0 25px rgba(0, 0, 0, 0.8);
+      box-shadow: inset 0 2px 14px rgba(0, 0, 0, 0.04), 0 8px 30px rgba(0, 0, 0, 0.03);
       position: relative;
       overflow: hidden;
       display: flex;
@@ -343,22 +417,22 @@
     .slot-indicator-line {
       position: absolute;
       top: 50%;
-      left: 0;
-      right: 0;
-      height: 2px;
-      background: linear-gradient(90deg, transparent, #FFD700, transparent);
-      box-shadow: 0 0 12px #FFD700;
+      left: 10%;
+      right: 10%;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--accent-red), transparent);
       transform: translateY(-50%);
       pointer-events: none;
       z-index: 10;
+      opacity: 0.6;
     }
 
     .slot-rolling-card {
-      font-size: 48px;
-      font-weight: 900;
+      font-family: "Noto Serif TC", serif;
+      font-size: 46px;
+      font-weight: 800;
       letter-spacing: 3px;
-      color: #FFFFFF;
-      text-shadow: 0 4px 15px rgba(0, 0, 0, 0.8);
+      color: var(--text-main);
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -367,59 +441,63 @@
     }
 
     @keyframes textJitter {
-      0% { transform: translateY(-4px) scale(0.98); opacity: 0.9; }
-      100% { transform: translateY(4px) scale(1.02); opacity: 1; }
+      0% { transform: translateY(-3px) scale(0.99); opacity: 0.92; }
+      100% { transform: translateY(3px) scale(1.01); opacity: 1; }
     }
 
     .slot-rolling-meta {
-      font-size: 20px;
-      font-weight: 700;
-      color: #2ECC71;
+      font-family: "Outfit", "Noto Sans TC", sans-serif;
+      font-size: 17px;
+      font-weight: 500;
+      color: var(--text-muted);
       letter-spacing: 1px;
     }
 
     .spin-status-note {
       margin-top: 24px;
-      font-size: 16px;
+      font-size: 15px;
       color: var(--text-muted);
+      letter-spacing: 0.8px;
       display: flex;
       align-items: center;
       gap: 10px;
     }
 
-    /* Winner Revealed View */
+    /* 3. Revealed View - 幸運當選御禮 */
     .view-revealed {
       display: none;
       flex-direction: column;
       align-items: center;
       text-align: center;
       width: 100%;
-      animation: revealZoom 0.6s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+      animation: revealZoom 0.55s cubic-bezier(0.18, 0.89, 0.32, 1.28);
     }
 
     @keyframes revealZoom {
-      0% { transform: scale(0.6); opacity: 0; }
+      0% { transform: scale(0.85); opacity: 0; }
       100% { transform: scale(1); opacity: 1; }
     }
 
     .reveal-header-badge {
-      background: linear-gradient(135deg, #FFD700, #F39C12);
-      color: #1A382A;
-      font-size: 18px;
-      font-weight: 900;
-      padding: 8px 24px;
-      border-radius: 30px;
-      letter-spacing: 1.5px;
-      margin-bottom: 16px;
-      box-shadow: 0 4px 20px rgba(255, 215, 0, 0.5);
+      background: var(--accent-red);
+      color: #FFFFFF;
+      font-family: "Noto Serif TC", serif;
+      font-size: 15px;
+      font-weight: 700;
+      padding: 6px 22px;
+      border-radius: 4px;
+      letter-spacing: 3px;
+      margin-bottom: 14px;
+      box-shadow: 0 4px 16px rgba(201, 59, 59, 0.25);
     }
 
     .reveal-prize-title {
+      font-family: "Noto Serif TC", serif;
       font-size: 32px;
-      font-weight: 900;
-      color: #FFFFFF;
+      font-weight: 800;
+      letter-spacing: 2px;
+      color: var(--text-main);
       margin-bottom: 24px;
-      text-shadow: 0 2px 14px rgba(0,0,0,0.6);
     }
 
     .winners-grid {
@@ -431,57 +509,61 @@
       max-width: 960px;
       max-height: 440px;
       overflow-y: auto;
-      padding: 10px;
+      padding: 8px;
     }
 
     .winner-card {
-      background: linear-gradient(135deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.04));
-      border: 2px solid #FFD700;
-      border-radius: 20px;
-      padding: 24px 30px;
+      background: var(--stage-bg);
+      border: 1px solid var(--stage-border);
+      border-top: 3px solid var(--accent-red);
+      border-radius: 16px;
+      padding: 24px 28px;
       min-width: 280px;
       max-width: 380px;
       flex: 1 1 calc(50% - 20px);
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4), inset 0 0 20px rgba(255, 215, 0, 0.15);
+      box-shadow: var(--shadow-card);
       position: relative;
       display: flex;
       flex-direction: column;
       align-items: center;
-      animation: cardPop 0.5s ease backwards;
+      animation: cardPop 0.45s ease backwards;
+      transition: all 0.25s ease;
     }
 
     @keyframes cardPop {
-      0% { transform: translateY(30px) scale(0.9); opacity: 0; }
+      0% { transform: translateY(20px) scale(0.94); opacity: 0; }
       100% { transform: translateY(0) scale(1); opacity: 1; }
     }
 
     .winner-card.single-mode {
-      min-width: 380px;
-      padding: 36px 48px;
+      min-width: 360px;
+      padding: 34px 44px;
     }
 
     .winner-crown {
-      font-size: 36px;
+      font-size: 30px;
       margin-bottom: 8px;
-      filter: drop-shadow(0 2px 8px rgba(255, 215, 0, 0.6));
+      color: var(--accent-gold);
     }
 
     .winner-name {
+      font-family: "Noto Serif TC", serif;
       font-size: 36px;
-      font-weight: 900;
+      font-weight: 800;
       letter-spacing: 2px;
-      color: #FFFFFF;
-      margin-bottom: 10px;
+      color: var(--text-main);
+      margin-bottom: 8px;
     }
 
     .winner-card.single-mode .winner-name {
-      font-size: 50px;
+      font-size: 48px;
     }
 
     .winner-org-title {
-      font-size: 17px;
-      color: #A3E9C4;
-      font-weight: 700;
+      font-size: 15.5px;
+      color: var(--text-muted);
+      font-weight: 500;
+      letter-spacing: 0.5px;
       margin-bottom: 12px;
       display: flex;
       align-items: center;
@@ -489,27 +571,32 @@
     }
 
     .winner-table-badge {
-      background: rgba(255, 215, 0, 0.2);
-      border: 1px solid rgba(255, 215, 0, 0.5);
-      color: #FFE66D;
-      padding: 6px 16px;
+      background: var(--pill-bg);
+      border: 1px solid var(--pill-border);
+      color: var(--accent-gold);
+      padding: 5px 14px;
       border-radius: 20px;
-      font-size: 15px;
-      font-weight: 800;
-      letter-spacing: 0.5px;
+      font-size: 13.5px;
+      font-weight: 600;
+      letter-spacing: 0.6px;
     }
 
-    /* Sidebar History (Right) */
+    /* Sidebar History (Right) - 日式榮譽當選名冊 */
     .history-sidebar {
-      width: 360px;
-      background: rgba(9, 29, 20, 0.65);
-      border: 1px solid var(--glass-border);
+      width: 350px;
+      height: 100%;
+      max-height: 100%;
+      min-height: 0;
+      background: var(--sidebar-bg);
+      border: 1px solid var(--sidebar-border);
       border-radius: 24px;
-      backdrop-filter: blur(14px);
-      padding: 24px;
+      padding: 20px;
       display: flex;
       flex-direction: column;
-      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.3);
+      box-shadow: var(--shadow-soft);
+      overflow: hidden;
+      box-sizing: border-box;
+      transition: all 0.3s ease;
     }
 
     .history-header {
@@ -517,108 +604,135 @@
       justify-content: space-between;
       align-items: center;
       padding-bottom: 14px;
-      border-bottom: 1px solid var(--glass-border);
+      border-bottom: 1px solid var(--header-border);
       margin-bottom: 16px;
+      flex-shrink: 0;
     }
 
     .history-title {
+      font-family: "Noto Serif TC", serif;
       font-size: 17px;
-      font-weight: 800;
-      color: #FFD700;
+      font-weight: 700;
+      letter-spacing: 1.2px;
+      color: var(--text-main);
       display: flex;
       align-items: center;
       gap: 8px;
     }
 
     .history-count {
-      font-size: 12.5px;
-      background: rgba(255, 215, 0, 0.15);
-      border: 1px solid rgba(255, 215, 0, 0.3);
-      color: #FFD700;
+      font-size: 12px;
+      background: var(--accent-red-bg);
+      border: 1px solid rgba(201, 59, 59, 0.2);
+      color: var(--accent-red);
       padding: 3px 10px;
       border-radius: 12px;
       font-weight: 700;
+      letter-spacing: 0.5px;
     }
 
     .history-list {
       flex: 1;
-      overflow-y: auto;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      padding-right: 4px;
-      scroll-behavior: smooth;
+      min-height: 0;
+      overflow-y: hidden; /* 由JS連續平滑滾動，消除滾動條干擾 */
+      overflow-x: hidden;
+      position: relative;
+      padding-right: 2px;
+      /* 溫潤和紙羽化遮罩，連續滾動無縫淡入淡出 */
+      -webkit-mask-image: linear-gradient(to bottom, transparent 0%, var(--mask-fade-color) 16px, var(--mask-fade-color) calc(100% - 16px), transparent 100%);
+      mask-image: linear-gradient(to bottom, transparent 0%, var(--mask-fade-color) 16px, var(--mask-fade-color) calc(100% - 16px), transparent 100%);
     }
 
     .history-list::-webkit-scrollbar {
-      width: 4px;
+      width: 3px;
     }
 
     .history-list::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .history-list::-webkit-scrollbar-thumb {
       background: rgba(0, 0, 0, 0.15);
       border-radius: 4px;
     }
 
-    .history-list::-webkit-scrollbar-thumb {
-      background: rgba(255, 215, 0, 0.35);
-      border-radius: 4px;
+    /* 連續滾動軌道與卡片群組 */
+    .history-scroll-track {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      width: 100%;
     }
 
-    .history-list::-webkit-scrollbar-thumb:hover {
-      background: rgba(255, 215, 0, 0.65);
+    .history-group {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      width: 100%;
     }
 
     .history-item {
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      border-radius: 14px;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-left: 3px solid var(--accent-red);
+      border-radius: 12px;
       padding: 12px 14px;
       transition: all 0.2s ease;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.02);
     }
 
     .history-item:hover {
-      background: rgba(255, 255, 255, 0.09);
-      border-color: rgba(255, 215, 0, 0.3);
+      border-color: rgba(201, 59, 59, 0.4);
+      background: var(--stage-bg);
+      transform: translateX(2px);
     }
 
     .history-item.revoked {
-      opacity: 0.5;
+      opacity: 0.45;
       text-decoration: line-through;
+      border-left-color: var(--text-light);
     }
 
     .item-top {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 6px;
+      margin-bottom: 5px;
     }
 
     .item-prize {
-      font-size: 12px;
-      font-weight: 800;
-      color: #FFD700;
-      background: rgba(255, 215, 0, 0.15);
-      padding: 2px 8px;
-      border-radius: 6px;
+      font-size: 11.5px;
+      font-weight: 700;
+      color: var(--accent-red);
+      background: var(--accent-red-bg);
+      border: 1px solid rgba(201, 59, 59, 0.15);
+      padding: 1px 7px;
+      border-radius: 4px;
+      letter-spacing: 0.5px;
     }
 
     .item-time {
+      font-family: "Cinzel", "Outfit", sans-serif;
       font-size: 11px;
-      color: var(--text-muted);
+      color: var(--text-light);
+      letter-spacing: 0.5px;
     }
 
     .item-name {
+      font-family: "Noto Serif TC", serif;
       font-size: 16px;
-      font-weight: 800;
-      color: #fff;
+      font-weight: 700;
+      letter-spacing: 1px;
+      color: var(--text-main);
       display: flex;
       justify-content: space-between;
       align-items: center;
     }
 
     .item-meta {
-      font-size: 12.5px;
+      font-size: 12px;
       color: var(--text-muted);
+      letter-spacing: 0.4px;
       margin-top: 3px;
     }
 
@@ -635,7 +749,7 @@
     }
 
     @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(10px); }
+      from { opacity: 0; transform: translateY(8px); }
       to { opacity: 1; transform: translateY(0); }
     }
   </style>
@@ -652,10 +766,10 @@
   <!-- Top Header Bar -->
   <header class="lottery-header">
     <div class="brand-group">
-      <div class="brand-icon">🎁</div>
+      <div class="brand-icon">🎋</div>
       <div class="brand-title">
         <h1>InPoint <span>現場大抽獎</span></h1>
-        <p id="headerEventName">大會專屬舞台大螢幕 ‧ 即時震撼連動</p>
+        <p id="headerEventName">大會專屬舞台大螢幕 ‧ 盛典抽選現場</p>
       </div>
     </div>
 
@@ -664,6 +778,10 @@
         <span class="status-dot"></span>
         <span id="signalrStatusText">連線待命中 (等待後台指令)</span>
       </div>
+
+      <button type="button" class="btn-action" onclick="toggleTheme()" id="themeToggleBtn" title="和風主題切換">
+        <span>☀️ 和紙白</span>
+      </button>
 
       <button type="button" class="btn-action" onclick="toggleNameMask()" id="maskToggleBtn" title="姓名遮蔽切換">
         <span>🔒 遮蔽姓名：開啟</span>
@@ -688,44 +806,44 @@
       <!-- Stage Top Live Stat Pill -->
       <div class="stage-info-strip">
         <div class="info-item">
-          <span class="label">現場已報到抽獎庫：</span>
+          <span class="label">已報到庫：</span>
           <span class="val" id="statCheckedInCount">0</span>
-          <span style="font-size: 12px; color: var(--text-muted);">人</span>
+          <span style="font-size: 12px; color: var(--text-muted);">名</span>
         </div>
-        <div style="width: 1px; height: 14px; background: rgba(255,255,255,0.2);"></div>
+        <div style="width: 1px; height: 12px; background: var(--header-border);"></div>
         <div class="info-item">
-          <span class="label">目前獎項名額：</span>
+          <span class="label">抽選名額：</span>
           <span class="val" id="statTargetQuantity">-</span>
           <span style="font-size: 12px; color: var(--text-muted);">位</span>
         </div>
-        <div style="width: 1px; height: 14px; background: rgba(255,255,255,0.2);"></div>
+        <div style="width: 1px; height: 12px; background: var(--header-border);"></div>
         <div class="info-item">
-          <span class="label">已累計中獎：</span>
+          <span class="label">當選累計：</span>
           <span class="val" id="statTotalWinners">0</span>
-          <span style="font-size: 12px; color: var(--text-muted);">人</span>
+          <span style="font-size: 12px; color: var(--text-muted);">名</span>
         </div>
       </div>
 
       <!-- 1. IDLE VIEW -->
       <div class="view-idle" id="viewIdle">
-        <div class="idle-icon-wrap">🎁</div>
-        <div class="idle-title">幸運大抽獎 · 榮耀登場</div>
+        <div class="idle-icon-wrap">結</div>
+        <div class="idle-title">幸運大抽籤 ‧ 盛典登場</div>
         <div class="idle-subtitle">
-          大會 100% 針對現場「已完成報到」名單公平公開隨機抽選<br>
-          後台作業端點擊【開始抽獎】即可同步觸發大螢幕滾動開獎！
+          大會 100% 針對現場「已完成報到」貴賓名單公正隨機抽選<br>
+          系統待命中，靜候後台開獎信號揭曉幸運嘉賓
         </div>
         <div class="idle-current-prize-card" id="idlePrizeCard" style="display: none;">
-          <span>🏆 當前準備抽出：</span>
+          <span>當前準備抽出：</span>
           <span id="idlePrizeName"></span>
         </div>
       </div>
 
-      <!-- 2. SPINNING VIEW (高速旋轉老虎機) -->
+      <!-- 2. SPINNING VIEW (日式神籤字軸抽選) -->
       <div class="view-spinning" id="viewSpinning">
         <div class="spin-target-prize">
-          <span>✨ 正在抽出：</span>
+          <span>抽籤中 ‧ </span>
           <span id="spinPrizeName">頭獎 - iPhone 16</span>
-          <span style="font-size: 16px; color: #FFEAA7;" id="spinQuantityBadge">(抽出 1 位)</span>
+          <span style="font-size: 15px; color: var(--accent-gold); margin-left: 4px;" id="spinQuantityBadge">(抽出 1 位)</span>
         </div>
 
         <div class="slot-machine-frame">
@@ -737,14 +855,14 @@
         </div>
 
         <div class="spin-status-note">
-          <span class="status-dot" style="background: #F1C40F; box-shadow: 0 0 10px #F1C40F;"></span>
-          <span>大螢幕高速抽選中，等待後台開獎信號揭曉...</span>
+          <span class="status-dot"></span>
+          <span>大螢幕高速隨機抽選中，靜候揭曉...</span>
         </div>
       </div>
 
       <!-- 3. REVEALED VIEW (揭曉得獎結果) -->
       <div class="view-revealed" id="viewRevealed">
-        <div class="reveal-header-badge">🎉 恭喜幸運得獎者 🎉</div>
+        <div class="reveal-header-badge">祝 ‧ 幸運當選</div>
         <div class="reveal-prize-title" id="revealPrizeTitle">【頭獎 - 戴森頂級吹風機】</div>
 
         <div class="winners-grid" id="winnersGrid">
@@ -758,17 +876,16 @@
     <aside class="history-sidebar">
       <div class="history-header">
         <div class="history-title">
-          <span>🏆 榮譽得獎榜</span>
+          <span>榮譽當選名冊</span>
         </div>
-        <span class="history-count" id="historyCount">0 位得獎</span>
+        <span class="history-count" id="historyCount">0 位當選</span>
       </div>
 
       <div class="history-list" id="historyList">
         <!-- Dynamic History Items -->
-        <div style="text-align: center; color: var(--text-muted); font-size: 13px; padding: 30px 10px;">
-          尚無中獎紀錄<br>等待第一位幸運貴賓誕生！
+        <div style="text-align: center; color: var(--text-muted); font-size: 13px; padding: 40px 10px; letter-spacing: 1px;">
+          尚無中獎紀錄<br>等待第一位幸運貴賓誕生
         </div>
-      </div>
     </aside>
 
   </main>
@@ -785,11 +902,33 @@
     let currentEventName = '';
     let isNameMasked = localStorage.getItem('inpoint_lottery_masked') !== 'false';
     let isSoundEnabled = true;
+    let currentTheme = localStorage.getItem('inpoint_lottery_theme') || 'light';
     let signalrConn = null;
     let rollingTimer = null;
     let candidatePool = [];
     let historyWinners = [];
+    let lastRevealedData = null; // 紀錄最新揭曉的開獎資料
     let audioCtx = null;
+
+    // 日系和風主題切換系統 (和紙白 Light / 漆墨黑 Dark)
+    function applyTheme(theme) {
+      currentTheme = theme;
+      localStorage.setItem('inpoint_lottery_theme', theme);
+      if (theme === 'dark') {
+        document.documentElement.setAttribute('data-theme', 'dark');
+      } else {
+        document.documentElement.removeAttribute('data-theme');
+      }
+      const btn = document.getElementById('themeToggleBtn');
+      if (btn) {
+        btn.innerHTML = theme === 'dark' ? '<span>🌙 漆墨黑</span>' : '<span>☀️ 和紙白</span>';
+      }
+    }
+
+    function toggleTheme() {
+      const nextTheme = currentTheme === 'dark' ? 'light' : 'dark';
+      applyTheme(nextTheme);
+    }
 
     // Web Audio API Sound Synthesizer (Zero External Dependencies)
     function initAudio() {
@@ -847,12 +986,39 @@
       return str[0] + '○'.repeat(str.length - 2) + str[str.length - 1];
     }
 
+    // 即時同步左側主舞台（得獎卡片區與滾動區）姓名遮蔽狀態
+    function updateRevealedNames() {
+      const winnerNameEls = document.querySelectorAll('#winnersGrid .winner-name');
+      winnerNameEls.forEach(el => {
+        const raw = el.getAttribute('data-raw-name');
+        if (raw) {
+          el.textContent = maskName(raw);
+        }
+      });
+
+      const slotNameEl = document.getElementById('slotName');
+      if (slotNameEl) {
+        const rawSlot = slotNameEl.getAttribute('data-raw-name');
+        if (rawSlot) {
+          slotNameEl.textContent = maskName(rawSlot);
+        }
+      }
+    }
+
+    // 更新遮蔽狀態按鈕與所有姓名顯示（雙向同步左側舞台與右側歷史榜）
+    function updateMaskUi() {
+      const btn = document.getElementById('maskToggleBtn');
+      if (btn) {
+        btn.innerHTML = isNameMasked ? '<span>🔒 遮蔽姓名：開啟</span>' : '<span>👁️ 顯示全名</span>';
+      }
+      updateRevealedNames();
+      renderHistoryList();
+    }
+
     function toggleNameMask() {
       isNameMasked = !isNameMasked;
       localStorage.setItem('inpoint_lottery_masked', isNameMasked ? 'true' : 'false');
-      const btn = document.getElementById('maskToggleBtn');
-      btn.innerHTML = isNameMasked ? '<span>🔒 遮蔽姓名：開啟</span>' : '<span>👁️ 顯示全名</span>';
-      renderHistoryList();
+      updateMaskUi();
     }
 
     function toggleSound() {
@@ -878,9 +1044,9 @@
 
     // Initialization
     async function initLotteryScreen() {
+      applyTheme(currentTheme);
       currentEventId = getEventIdFromUrl();
-      toggleNameMask(); // synchronize initial UI
-      toggleNameMask();
+      updateMaskUi(); // 初始化同步姓名遮蔽UI與舞台
 
       await fetchEventDetails();
       await fetchLotteryStatus();
@@ -893,6 +1059,17 @@
 
       // 啟動榮譽得獎榜自動持續平滑捲動
       initHistoryAutoScroll();
+
+      if (new URLSearchParams(window.location.search).get('demo') === 'reveal') {
+        revealWinners({
+          prizeName: '二獎',
+          winners: [
+            { guestName: 'Guest 2', organization: 'Testing Unit', title: 'VIP', tableNo: '現場安排' },
+            { guestName: 'Guest 9', organization: 'Testing Unit', title: 'VIP', tableNo: '現場安排' },
+            { guestName: 'Guest 7', organization: 'Testing Unit', title: 'VIP', tableNo: '現場安排' }
+          ]
+        });
+      }
     }
 
     async function fetchEventDetails() {
@@ -938,8 +1115,11 @@
           }
 
           if (data.winners && Array.isArray(data.winners)) {
+            const hasChanged = checkWinnersChanged(data.winners, historyWinners);
             historyWinners = data.winners;
-            renderHistoryList();
+            if (hasChanged) {
+              renderHistoryList();
+            }
             const activeList = historyWinners.filter(w => !w.isRevoked);
             document.getElementById('statTotalWinners').textContent = activeList.length;
           }
@@ -1046,8 +1226,9 @@
       const label = document.getElementById('signalrStatusText');
       if (label) label.textContent = text;
       if (badge) {
-        badge.style.borderColor = online ? 'rgba(46, 204, 113, 0.35)' : 'rgba(241, 196, 15, 0.4)';
-        badge.style.color = online ? '#A3E9C4' : '#F7DC6F';
+        badge.style.borderColor = online ? 'rgba(61, 126, 90, 0.25)' : 'rgba(201, 59, 59, 0.25)';
+        badge.style.color = online ? 'var(--accent-green)' : 'var(--accent-red)';
+        badge.style.background = online ? 'var(--accent-green-bg)' : 'var(--accent-red-bg)';
       }
     }
 
@@ -1081,13 +1262,19 @@
         playTickSound();
         if (candidatePool.length > 0) {
           const pick = candidatePool[Math.floor(Math.random() * candidatePool.length)];
-          slotNameEl.textContent = maskName(pick.name || pick.Name);
+          const rawName = pick.name || pick.Name || '';
+          slotNameEl.setAttribute('data-raw-name', rawName);
+          slotNameEl.textContent = maskName(rawName);
           slotMetaEl.textContent = `${pick.organization || pick.Organization || '大會貴賓'} · ${pick.tableNo || pick.TableNo || '貴賓席'}`;
         } else {
-          const fakeNames = ['陳○宏', '林○美', '黃○峰', '張○儀', '李○華', '王○明', '蔡○豪', '郭○君'];
+          const fakeNames = isNameMasked
+            ? ['陳○宏', '林○美', '黃○峰', '張○儀', '李○華', '王○明', '蔡○豪', '郭○君']
+            : ['陳建宏', '林秀美', '黃正峰', '張雅儀', '李淑華', '王俊明', '蔡志豪', '郭怡君'];
           const fakeOrgs = ['心血管醫學部', '秀傳紀念醫院', '創新研發組', '醫療企劃處', '資訊科技中心'];
           const fakeTables = ['第 3 組', 'VIP-1 主桌', '第 8 組', '第 12 組'];
-          slotNameEl.textContent = fakeNames[Math.floor(Math.random() * fakeNames.length)];
+          const fakeName = fakeNames[Math.floor(Math.random() * fakeNames.length)];
+          slotNameEl.removeAttribute('data-raw-name');
+          slotNameEl.textContent = fakeName;
           slotMetaEl.textContent = `${fakeOrgs[Math.floor(Math.random() * fakeOrgs.length)]} · ${fakeTables[Math.floor(Math.random() * fakeTables.length)]}`;
         }
       }, 70);
@@ -1099,6 +1286,8 @@
         clearInterval(rollingTimer);
         rollingTimer = null;
       }
+
+      lastRevealedData = data;
 
       const viewIdle = document.getElementById('viewIdle');
       const viewSpinning = document.getElementById('viewSpinning');
@@ -1119,11 +1308,12 @@
       const isSingle = winners.length === 1;
 
       winners.forEach(w => {
+        const rawName = w.guestName || w.GuestName || w.name || w.Name || '';
         const card = document.createElement('div');
         card.className = `winner-card ${isSingle ? 'single-mode' : ''}`;
         card.innerHTML = `
           <div class="winner-crown">👑</div>
-          <div class="winner-name">${escapeHtml(maskName(w.guestName || w.GuestName))}</div>
+          <div class="winner-name" data-raw-name="${escapeHtml(rawName)}">${escapeHtml(maskName(rawName))}</div>
           <div class="winner-org-title">
             <span>${escapeHtml(w.organization || w.Organization || '')}</span>
             <span>${escapeHtml(w.title || w.Title ? '· ' + (w.title || w.Title) : '')}</span>
@@ -1172,6 +1362,10 @@
         clearInterval(rollingTimer);
         rollingTimer = null;
       }
+      lastRevealedData = null;
+      const grid = document.getElementById('winnersGrid');
+      if (grid) grid.innerHTML = '';
+
       document.getElementById('viewSpinning').style.display = 'none';
       document.getElementById('viewRevealed').style.display = 'none';
       document.getElementById('viewIdle').style.display = 'flex';
@@ -1183,23 +1377,23 @@
       }
     }
 
-    function renderHistoryList() {
-      const container = document.getElementById('historyList');
-      if (!container) return;
-
-      const activeList = historyWinners.filter(w => !w.isRevoked);
-      document.getElementById('historyCount').textContent = `${activeList.length} 位得獎`;
-
-      if (historyWinners.length === 0) {
-        container.innerHTML = `
-          <div style="text-align: center; color: var(--text-muted); font-size: 13px; padding: 30px 10px;">
-            尚無中獎紀錄<br>等待第一位幸運貴賓誕生！
-          </div>
-        `;
-        return;
+    function checkWinnersChanged(newList, oldList) {
+      if (!oldList || !newList) return true;
+      if (newList.length !== oldList.length) return true;
+      for (let i = 0; i < newList.length; i++) {
+        const nw = newList[i];
+        const ow = oldList[i];
+        const nid = nw.winnerId || nw.WinnerId || '';
+        const oid = ow.winnerId || ow.WinnerId || '';
+        if (nid !== oid) return true;
+        if (Boolean(nw.isRevoked) !== Boolean(ow.isRevoked)) return true;
       }
+      return false;
+    }
 
-      container.innerHTML = historyWinners.map(w => `
+    function buildHistoryItemsHtml(list) {
+      if (!list || list.length === 0) return '';
+      return list.map(w => `
         <div class="history-item ${w.isRevoked ? 'revoked' : ''}">
           <div class="item-top">
             <span class="item-prize">${escapeHtml(w.prizeName)}</span>
@@ -1207,23 +1401,80 @@
           </div>
           <div class="item-name">
             <span>${escapeHtml(maskName(w.guestName))}</span>
-            <span style="font-size: 12px; color: #FFD700;">${w.isRevoked ? '(棄權)' : escapeHtml(w.tableNo || '')}</span>
+            <span style="font-size: 12px; color: var(--accent-gold); font-weight: 600;">${w.isRevoked ? '(棄權)' : escapeHtml(w.tableNo || '')}</span>
           </div>
           <div class="item-meta">${escapeHtml(w.organization || '')} ${escapeHtml(w.title || '')}</div>
         </div>
       `).join('');
+    }
 
-      // 名單更新時，短暫置頂 2.5 秒顯示最新抽出者，隨後平滑自動循環捲動
-      pauseHistoryAutoScrollTemporarily(2500);
+    function renderHistoryList() {
+      const container = document.getElementById('historyList');
+      if (!container) return;
+
+      const activeList = historyWinners.filter(w => !w.isRevoked);
+      document.getElementById('historyCount').textContent = `${activeList.length} 位當選`;
+
+      if (historyWinners.length === 0) {
+        container.innerHTML = `
+          <div style="text-align: center; color: var(--text-muted); font-size: 13px; padding: 40px 10px; letter-spacing: 1px;">
+            尚無中獎紀錄<br>等待第一位幸運貴賓誕生
+          </div>
+        `;
+        return;
+      }
+
+      const singleHtml = buildHistoryItemsHtml(historyWinners);
+
+      // 構建無縫連續雙軌容器 (Group 1 主組 + Group 2 接續組)
+      container.innerHTML = `
+        <div class="history-scroll-track" id="historyTrack">
+          <div class="history-group" id="historyGroup1">${singleHtml}</div>
+          <div class="history-group" id="historyGroup2" aria-hidden="true">${singleHtml}</div>
+        </div>
+      `;
+
+      // 依據容器可視高度與資料量，調整 Group 1 填充與 Group 2 顯示
+      setupHistoryTrackLoop(singleHtml);
+
+      // 最新開獎或名單異動時，置頂 3 秒展示最新得獎者，隨後平滑進入連續無縫滾動
+      container.scrollTop = 0;
+      historyLoopOffset = 0;
+      pauseHistoryAutoScrollTemporarily(3000);
+    }
+
+    function setupHistoryTrackLoop(singleHtml) {
+      const container = document.getElementById('historyList');
+      const group1 = document.getElementById('historyGroup1');
+      const group2 = document.getElementById('historyGroup2');
+      if (!container || !group1 || !group2) return;
+
+      // 若僅有 0 或 1 位得獎者，無需循環滾動，靜態優雅呈現
+      if (historyWinners.length <= 1) {
+        group2.style.display = 'none';
+        return;
+      }
+
+      // 若筆數較少 (2~3 筆)，鏡像複製填充讓軌道飽滿順暢
+      if (historyWinners.length <= 3) {
+        group1.innerHTML = singleHtml + singleHtml;
+      } else {
+        group1.innerHTML = singleHtml;
+      }
+
+      // 確保 Group 2 與 Group 1 內容完全一致，達到像素級完美無縫對齊
+      group2.innerHTML = group1.innerHTML;
+      group2.style.display = 'flex';
     }
 
     // =========================================================================
-    // 榮譽得獎榜自動平滑持續捲動控制器 (Auto Continuous Smooth Scrolling)
+    // 榮譽得獎榜連續無縫平滑滾動控制器 (Seamless Continuous Loop Scrolling)
     // =========================================================================
     let historyAutoScrollRaf = null;
     let isHistoryMouseOver = false;
     let isHistoryScrollPaused = false;
     let historyScrollPauseTimer = null;
+    let historyLoopOffset = 0; // 亞像素平滑滾動偏移量
 
     function initHistoryAutoScroll() {
       const container = document.getElementById('historyList');
@@ -1233,7 +1484,7 @@
         isHistoryMouseOver = true;
       });
       container.addEventListener('mouseleave', () => {
-        isHistoryMouseOver = false;
+        setTimeout(() => { isHistoryMouseOver = false; }, 800);
       });
       container.addEventListener('touchstart', () => {
         isHistoryMouseOver = true;
@@ -1242,10 +1493,17 @@
         setTimeout(() => { isHistoryMouseOver = false; }, 1200);
       });
 
+      // 支援滑鼠滾輪手動瀏覽：移開滑鼠後自動從當前位置繼續無縫滾動
+      container.addEventListener('scroll', () => {
+        if (isHistoryMouseOver) {
+          historyLoopOffset = container.scrollTop;
+        }
+      }, { passive: true });
+
       startHistoryAutoScrollLoop();
     }
 
-    function pauseHistoryAutoScrollTemporarily(ms = 2500) {
+    function pauseHistoryAutoScrollTemporarily(ms = 3000) {
       isHistoryScrollPaused = true;
       if (historyScrollPauseTimer) clearTimeout(historyScrollPauseTimer);
       historyScrollPauseTimer = setTimeout(() => {
@@ -1263,36 +1521,25 @@
       }
 
       let lastTime = performance.now();
-      const scrollSpeed = 26; // 每秒平滑捲動 26 像素，清晰舒適
+      const scrollSpeed = 28; // 每秒平滑推進 28 像素，清晰舒適、流暢自然
 
       function scrollStep(now) {
         const delta = Math.min((now - lastTime) / 1000, 0.1);
         lastTime = now;
 
         if (!isHistoryMouseOver && !isHistoryScrollPaused && container) {
-          const maxScroll = container.scrollHeight - container.clientHeight;
-          if (maxScroll > 12) { // 超出可視範圍才需要自動捲動
-            const nextScroll = container.scrollTop + scrollSpeed * delta;
-            
-            if (nextScroll >= maxScroll - 1) {
-              container.scrollTop = maxScroll;
-              // 捲動到底部，停留 2.5 秒讓現場人員看清最後名單
-              isHistoryScrollPaused = true;
-              if (historyScrollPauseTimer) clearTimeout(historyScrollPauseTimer);
-              historyScrollPauseTimer = setTimeout(() => {
-                if (container) {
-                  // 平滑回滾至頂部
-                  container.scrollTo({ top: 0, behavior: 'smooth' });
-                  // 回到頂部後停留 2 秒再開始下一輪循環
-                  setTimeout(() => {
-                    isHistoryScrollPaused = false;
-                  }, 2000);
-                } else {
-                  isHistoryScrollPaused = false;
-                }
-              }, 2500);
-            } else {
-              container.scrollTop = nextScroll;
+          const group2 = document.getElementById('historyGroup2');
+          if (group2 && group2.style.display !== 'none') {
+            const loopHeight = group2.offsetTop;
+            if (loopHeight > 0) {
+              historyLoopOffset += scrollSpeed * delta;
+
+              // 達到無縫銜接點：透過模數運算精準映射回循環起點，實現像素級完美接續
+              if (historyLoopOffset >= loopHeight) {
+                historyLoopOffset = historyLoopOffset % loopHeight;
+              }
+
+              container.scrollTop = historyLoopOffset;
             }
           }
         }
@@ -1332,7 +1579,8 @@
       canvas.height = window.innerHeight;
 
       const particles = [];
-      const colors = ['#FFD700', '#FF4D4D', '#2ECC71', '#3498DB', '#9B59B6', '#FFFFFF', '#E67E22'];
+      // 日式慶典專屬：山吹金箔、鳥居緋紅、櫻花粉白與香檳金紙花
+      const colors = ['#C93B3B', '#B88B4A', '#E8C587', '#FFFFFF', '#F2A4A4', '#EAA73E'];
 
       for (let i = 0; i < 220; i++) {
         particles.push({
