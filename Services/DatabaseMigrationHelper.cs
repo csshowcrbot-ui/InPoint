@@ -161,6 +161,8 @@ public static class DatabaseMigrationHelper
                     existing.MaxEvents = u.MaxEvents;
                     existing.IsActive = u.IsActive;
                     existing.Notes = u.Notes;
+                    existing.HasLotteryAddon = u.HasLotteryAddon;
+                    existing.LotteryAuthorizedAt = u.LotteryAuthorizedAt;
                 }
                 else
                 {
@@ -181,6 +183,7 @@ public static class DatabaseMigrationHelper
                     existing.IsActive = ev.IsActive;
                     existing.OwnerUsername = ev.OwnerUsername;
                     existing.RankRules = ev.RankRules;
+                    existing.HasLotteryAddon = ev.HasLotteryAddon;
                 }
                 else
                 {

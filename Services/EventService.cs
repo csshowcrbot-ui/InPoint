@@ -647,7 +647,8 @@ public class InMemoryEventService : IEventService
                 IsActive = u.IsActive,
                 CreatedAt = u.CreatedAt,
                 Notes = u.Notes,
-                EventCount = _events.Values.Count(e => string.Equals(e.OwnerUsername, u.Username, StringComparison.OrdinalIgnoreCase))
+                EventCount = _events.Values.Count(e => string.Equals(e.OwnerUsername, u.Username, StringComparison.OrdinalIgnoreCase)),
+                HasLotteryAddon = u.HasLotteryAddon
             })
             .ToList();
 
@@ -690,6 +691,8 @@ public class InMemoryEventService : IEventService
             existing.MaxEvents = user.MaxEvents;
             existing.IsActive = user.IsActive;
             existing.Notes = user.Notes;
+            existing.HasLotteryAddon = user.HasLotteryAddon;
+            existing.LotteryAuthorizedAt = user.LotteryAuthorizedAt;
             if (!string.IsNullOrWhiteSpace(user.PasswordHash))
             {
                 existing.PasswordHash = user.PasswordHash;

@@ -1099,6 +1099,25 @@ app.MapPut("/api/members/{userId}", async (string userId, UpdateMemberRequest re
     }
 
     await service.UpdateUserAsync(user);
+
+    // 同步更新記憶體中該會員已存在之活躍 Session，確保立即享有現場抽獎權限
+    foreach (var kvp in activeSessions)
+    {
+        if (string.Equals(kvp.Value.Username, user.Username, StringComparison.OrdinalIgnoreCase))
+        {
+            activeSessions[kvp.Key] = kvp.Value with
+            {
+                DisplayName = user.DisplayName,
+                Organization = user.Organization,
+                PlanType = user.PlanType,
+                ExpireAt = user.ExpireAt,
+                MaxGuestsPerEvent = user.MaxGuestsPerEvent,
+                MaxEvents = user.MaxEvents,
+                HasLotteryAddon = user.Role == "Admin" || user.HasLotteryAddon
+            };
+        }
+    }
+
     return Results.Ok(new { success = true, user });
 });
 

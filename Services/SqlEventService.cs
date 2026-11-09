@@ -386,7 +386,8 @@ public class SqlEventService : IEventService
             IsActive = u.IsActive,
             CreatedAt = u.CreatedAt,
             Notes = u.Notes,
-            EventCount = eventCounts.TryGetValue(u.Username, out var count) ? count : 0
+            EventCount = eventCounts.TryGetValue(u.Username, out var count) ? count : 0,
+            HasLotteryAddon = u.HasLotteryAddon
         }).ToList();
     }
 
@@ -431,6 +432,8 @@ public class SqlEventService : IEventService
         existing.MaxEvents = user.MaxEvents;
         existing.IsActive = user.IsActive;
         existing.Notes = user.Notes;
+        existing.HasLotteryAddon = user.HasLotteryAddon;
+        existing.LotteryAuthorizedAt = user.LotteryAuthorizedAt;
         if (!string.IsNullOrWhiteSpace(user.PasswordHash))
         {
             existing.PasswordHash = user.PasswordHash;
