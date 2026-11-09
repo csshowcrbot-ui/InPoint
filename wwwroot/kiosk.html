@@ -578,25 +578,25 @@
       <div class="kiosk-stats-row">
         <div class="kiosk-stat-card">
           <div class="kiosk-stat-label"><span>👥</span> 已完成報到</div>
-          <div class="kiosk-stat-val" id="kioskCheckedIn">155 <small>人到場</small></div>
+          <div class="kiosk-stat-val" id="kioskCheckedIn">0 <small>人到場</small></div>
         </div>
         <div class="kiosk-stat-card">
           <div class="kiosk-stat-label"><span>📈</span> 現場即時出席率</div>
-          <div class="kiosk-stat-val" id="kioskAttendanceRate" style="color: #2ECC71;">93.4%</div>
+          <div class="kiosk-stat-val" id="kioskAttendanceRate" style="color: #2ECC71;">0%</div>
         </div>
         <div class="kiosk-stat-card">
           <div class="kiosk-stat-label"><span>👑</span> VIP 1~2 級到場率</div>
-          <div class="kiosk-stat-val" id="kioskVipRate" style="color: #F1C40F;">3 / 3 <small>位到齊</small></div>
+          <div class="kiosk-stat-val" id="kioskVipRate" style="color: #F1C40F;">0 / 0 <small>位等席</small></div>
         </div>
       </div>
 
       <div class="kiosk-arrived-list-card">
         <div class="kiosk-arrived-header">
           <div class="kiosk-arrived-title">
-            <span>✨</span> 最新抵達貴賓與同仁 (<span id="kioskExpectedTotal">166</span> 人應到)
+            <span>✨</span> 最新抵達貴賓與同仁 (<span id="kioskExpectedTotal">0</span> 人應到)
           </div>
           <div class="kiosk-arrived-badge-count" id="kioskArrivalsCountBadge">
-            已報到 155 人
+            已報到 0 人
           </div>
         </div>
         <div class="kiosk-arrived-scroll" id="kioskArrivedList">
@@ -909,20 +909,32 @@
     }
 
     function renderStatsOnly(stats) {
+      if (!stats) return;
       const checkedInEl = document.getElementById('kioskCheckedIn');
       const rateEl = document.getElementById('kioskAttendanceRate');
       const expectedEl = document.getElementById('kioskExpectedTotal');
       const countBadgeEl = document.getElementById('kioskArrivalsCountBadge');
       const vipRateEl = document.getElementById('kioskVipRate');
 
-      if (checkedInEl) checkedInEl.innerHTML = `${stats.checkedInCount} <small>人到場</small>`;
-      if (rateEl) rateEl.textContent = `${stats.attendanceRate}%`;
-      if (expectedEl) expectedEl.textContent = stats.totalGuests;
-      if (countBadgeEl) countBadgeEl.textContent = `已報到 ${stats.checkedInCount} 人`;
+      const checkedCount = stats.checkedInCount !== undefined ? stats.checkedInCount : 0;
+      const attRate = stats.attendanceRate !== undefined ? stats.attendanceRate : 0;
+      const totalGuests = stats.totalGuests !== undefined ? stats.totalGuests : 0;
 
-      if (vipRateEl && stats.vip1Count !== undefined) {
-        const vipTotal = (stats.vip1Count || 0) + (stats.vip2Count || 0);
-        const vipChecked = (stats.vip1CheckedIn || 0) + (stats.vip2CheckedIn || 0);
+      if (checkedInEl) checkedInEl.innerHTML = `${checkedCount} <small>人到場</small>`;
+      if (rateEl) rateEl.textContent = `${attRate}%`;
+      if (expectedEl) expectedEl.textContent = totalGuests;
+      if (countBadgeEl) countBadgeEl.textContent = `已報到 ${checkedCount} 人`;
+
+      if (vipRateEl) {
+        let vipTotal = 0;
+        let vipChecked = 0;
+        if (stats.vipTotal !== undefined) {
+          vipTotal = stats.vipTotal || 0;
+          vipChecked = stats.vipCheckedIn || 0;
+        } else if (stats.vip1Count !== undefined) {
+          vipTotal = (stats.vip1Count || 0) + (stats.vip2Count || 0);
+          vipChecked = (stats.vip1CheckedIn || 0) + (stats.vip2CheckedIn || 0);
+        }
         vipRateEl.innerHTML = `${vipChecked} / ${vipTotal} <small>位${vipChecked >= vipTotal && vipTotal > 0 ? '到齊' : '等席'}</small>`;
       }
     }
