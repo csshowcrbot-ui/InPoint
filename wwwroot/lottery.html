@@ -1316,6 +1316,7 @@
 
       const prizeName = data.prizeName || data.PrizeName || '得獎者名單';
       const winners = data.winners || data.Winners || [];
+      const isSingle = winners.length === 1;
 
       document.getElementById('revealPrizeTitle').textContent = `【${prizeName}】`;
 
