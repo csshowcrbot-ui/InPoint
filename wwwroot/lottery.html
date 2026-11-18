@@ -505,13 +505,21 @@
       flex-direction: column;
       width: 100%;
       max-width: 960px;
-      max-height: 460px;
-      overflow-y: hidden; /* 由JS平滑自動輪播，亦支援滑鼠懸停與手動滾動 */
+      max-height: 480px;
+      overflow-y: hidden; /* 超出時由JS平滑自動輪播，亦支援滑鼠手動滾動 */
       overflow-x: hidden;
       padding: 6px;
       position: relative;
-      -webkit-mask-image: linear-gradient(to bottom, transparent 0%, var(--mask-fade-color) 12px, var(--mask-fade-color) calc(100% - 12px), transparent 100%);
-      mask-image: linear-gradient(to bottom, transparent 0%, var(--mask-fade-color) 12px, var(--mask-fade-color) calc(100% - 12px), transparent 100%);
+    }
+
+    /* 人數小於等於4位時直接以標準彈性網格排列 */
+    .winners-grid.static-grid {
+      display: flex;
+      flex-direction: row;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 20px;
+      overflow-y: visible;
     }
 
     .winners-scroll-track {
@@ -1417,10 +1425,12 @@
 
       // 若得獎人數少（<= 4 位），卡片數量不超過一頁，直接以標準響應式居中呈現
       if (winners.length <= 4) {
+        grid.classList.add('static-grid');
         grid.innerHTML = singleCardsHtml;
         return;
       }
 
+      grid.classList.remove('static-grid');
       // 超過單頁顯示數量（如一次抽取 5 位、10 位等）：啟用無縫雙軌自動滾動輪播
       grid.innerHTML = `
         <div class="winners-scroll-track" id="winnersTrack">
