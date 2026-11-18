@@ -3254,6 +3254,7 @@ class CheckInApp {
             const org = this.escapeHtml(w.organization || (w.guest ? w.guest.organization : '') || '無單位');
             const title = this.escapeHtml(w.title || (w.guest ? w.guest.title : '') || '');
             const seat = this.escapeHtml(w.seatNumber || w.tableNo || (w.guest ? (w.guest.seatNumber || w.guest.tableNo) : '') || '自由入座');
+            const note = w.notes || w.Notes || (w.guest ? w.guest.notes : '') || '';
             const orgTitle = title ? `${org} / ${title}` : org;
 
             let actionHtml = '';
@@ -3281,6 +3282,7 @@ class CheckInApp {
                     </td>
                     <td style="padding: 10px; font-weight: 700; color: #1E293B; font-size: 14px;">
                         ${guestName}
+                        ${note ? `<div style="font-size: 11px; color: #D97706; margin-top: 3px; font-weight: normal;">📌 ${this.escapeHtml(note)}</div>` : ''}
                     </td>
                     <td style="padding: 10px; color: #475569; font-size: 12.5px;">
                         ${orgTitle}

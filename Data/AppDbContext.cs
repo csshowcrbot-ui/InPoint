@@ -100,6 +100,7 @@ public class AppDbContext : DbContext
             entity.Property(w => w.Organization).HasMaxLength(200);
             entity.Property(w => w.Title).HasMaxLength(100);
             entity.Property(w => w.TableNo).HasMaxLength(50);
+            entity.Property(w => w.Notes).HasMaxLength(1000);
 
             entity.HasIndex(w => w.EventId);
             entity.HasIndex(w => new { w.EventId, w.GuestId });

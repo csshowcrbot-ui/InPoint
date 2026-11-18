@@ -606,6 +606,25 @@
       letter-spacing: 0.6px;
     }
 
+    .winner-note-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      margin-top: 8px;
+      padding: 3px 12px;
+      background: rgba(184, 139, 74, 0.12);
+      border: 1px dashed rgba(184, 139, 74, 0.45);
+      border-radius: 14px;
+      font-size: 12.5px;
+      color: var(--accent-gold);
+      max-width: 90%;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      box-sizing: border-box;
+      letter-spacing: 0.4px;
+    }
+
     /* Sidebar History (Right) - 日式榮譽當選名冊 */
     .history-sidebar {
       width: 350px;
@@ -759,6 +778,25 @@
       color: var(--text-muted);
       letter-spacing: 0.4px;
       margin-top: 3px;
+    }
+
+    .item-note {
+      font-size: 11.5px;
+      color: var(--accent-gold);
+      background: rgba(184, 139, 74, 0.08);
+      border: 1px dashed rgba(184, 139, 74, 0.35);
+      border-radius: 4px;
+      padding: 2px 7px;
+      margin-top: 5px;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      max-width: 100%;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      letter-spacing: 0.3px;
+      box-sizing: border-box;
     }
 
     /* Responsive */
@@ -1345,6 +1383,7 @@
             organization: w.organization || w.Organization || '',
             title: w.title || w.Title || '',
             tableNo: w.tableNo || w.TableNo || '',
+            notes: w.notes || w.Notes || '',
             wonAt: w.wonAt || w.WonAt || new Date().toISOString(),
             isRevoked: false
           };
@@ -1399,6 +1438,7 @@
       if (!winners || winners.length === 0) return '';
       return winners.map(w => {
         const rawName = w.guestName || w.GuestName || w.name || w.Name || '';
+        const note = w.notes || w.Notes || '';
         return `
           <div class="winner-card ${isSingle ? 'single-mode' : ''}">
             <div class="winner-crown">👑</div>
@@ -1408,6 +1448,7 @@
               <span>${escapeHtml(w.title || w.Title ? '· ' + (w.title || w.Title) : '')}</span>
             </div>
             <div class="winner-table-badge">席位：${escapeHtml(w.tableNo || w.TableNo || '現場安排')}</div>
+            ${note ? `<div class="winner-note-badge" title="${escapeHtml(note)}">📌 ${escapeHtml(note)}</div>` : ''}
           </div>
         `;
       }).join('');
@@ -1542,19 +1583,23 @@
 
     function buildHistoryItemsHtml(list) {
       if (!list || list.length === 0) return '';
-      return list.map(w => `
+      return list.map(w => {
+        const note = w.notes || w.Notes || '';
+        return `
         <div class="history-item ${w.isRevoked ? 'revoked' : ''}">
           <div class="item-top">
-            <span class="item-prize">${escapeHtml(w.prizeName)}</span>
-            <span class="item-time">${formatTaiwanTime(w.wonAt)}</span>
+            <span class="item-prize">${escapeHtml(w.prizeName || w.PrizeName || '')}</span>
+            <span class="item-time">${formatTaiwanTime(w.wonAt || w.WonAt)}</span>
           </div>
           <div class="item-name">
-            <span>${escapeHtml(maskName(w.guestName))}</span>
-            <span style="font-size: 12px; color: var(--accent-gold); font-weight: 600;">${w.isRevoked ? '(棄權)' : escapeHtml(w.tableNo || '')}</span>
+            <span>${escapeHtml(maskName(w.guestName || w.GuestName || ''))}</span>
+            <span style="font-size: 12px; color: var(--accent-gold); font-weight: 600;">${w.isRevoked ? '(棄權)' : escapeHtml(w.tableNo || w.TableNo || '')}</span>
           </div>
-          <div class="item-meta">${escapeHtml(w.organization || '')} ${escapeHtml(w.title || '')}</div>
+          <div class="item-meta">${escapeHtml(w.organization || w.Organization || '')} ${escapeHtml(w.title || w.Title || '')}</div>
+          ${note ? `<div class="item-note">📌 ${escapeHtml(note)}</div>` : ''}
         </div>
-      `).join('');
+      `;
+      }).join('');
     }
 
     function renderHistoryList() {

@@ -857,6 +857,7 @@ public class SqlEventService : IEventService
                 Organization = guest.Organization,
                 Title = guest.Title,
                 TableNo = guest.TableNo,
+                Notes = guest.Notes,
                 WonAt = DateTime.UtcNow,
                 IsRevoked = false
             };

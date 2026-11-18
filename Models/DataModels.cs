@@ -295,6 +295,7 @@ public class LotteryWinner
     public string Organization { get; set; } = string.Empty;
     public string Title { get; set; } = string.Empty;
     public string TableNo { get; set; } = string.Empty;
+    public string? Notes { get; set; }
     public DateTime WonAt { get; set; } = DateTime.UtcNow;
     public bool IsRevoked { get; set; } = false;
 }

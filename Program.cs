@@ -170,14 +170,30 @@ if (useSql)
                         ""Organization"" VARCHAR(200) NULL,
                         ""Title"" VARCHAR(100) NULL,
                         ""TableNo"" VARCHAR(50) NULL,
+                        ""Notes"" VARCHAR(1000) NULL,
                         ""WonAt"" TIMESTAMP NOT NULL DEFAULT NOW(),
                         ""IsRevoked"" BOOLEAN NOT NULL DEFAULT FALSE
                     );
                     CREATE INDEX IF NOT EXISTS ""IX_checkInLotteryWinners_EventId"" ON ""checkInLotteryWinners"" (""EventId"");
+
+                    IF EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'checkInLotteryWinners') THEN
+                        IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name = 'checkInLotteryWinners' AND column_name = 'Notes') THEN
+                            ALTER TABLE ""checkInLotteryWinners"" ADD COLUMN ""Notes"" VARCHAR(1000) NULL;
+                        END IF;
+                    END IF;
+                    IF EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'checkinlotterywinners') THEN
+                        IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name = 'checkinlotterywinners' AND column_name = 'notes') THEN
+                            ALTER TABLE checkinlotterywinners ADD COLUMN notes VARCHAR(1000) NULL;
+                        END IF;
+                        IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name = 'checkinlotterywinners' AND column_name = 'Notes') THEN
+                            ALTER TABLE checkinlotterywinners ADD COLUMN ""Notes"" VARCHAR(1000) NULL;
+                        END IF;
+                    END IF;
                 END $$;
 
-                -- 額外確保 checkInGuests 具備 CreatedAt 欄位 (原生語法雙重防護)
+                -- 額外確保 checkInGuests 與 checkInLotteryWinners 欄位熱更新 (原生語法雙重防護)
                 ALTER TABLE IF EXISTS ""checkInGuests"" ADD COLUMN IF NOT EXISTS ""CreatedAt"" TIMESTAMP NOT NULL DEFAULT NOW();
+                ALTER TABLE IF EXISTS ""checkInLotteryWinners"" ADD COLUMN IF NOT EXISTS ""Notes"" VARCHAR(1000) NULL;
                 ";
                 using var alterCmd = new NpgsqlCommand(alterPgSql, pgConn);
                 alterCmd.ExecuteNonQuery();
@@ -271,10 +287,16 @@ if (useSql)
                     [Organization] NVARCHAR(200) NULL,
                     [Title] NVARCHAR(100) NULL,
                     [TableNo] NVARCHAR(50) NULL,
+                    [Notes] NVARCHAR(1000) NULL,
                     [WonAt] DATETIME2 NOT NULL DEFAULT GETUTCDATE(),
                     [IsRevoked] BIT NOT NULL DEFAULT 0
                 );
                 CREATE INDEX [IX_checkInLotteryWinners_EventId] ON [checkInLotteryWinners]([EventId]);
+            END
+
+            IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('checkInLotteryWinners') AND name = 'Notes')
+            BEGIN
+                ALTER TABLE [checkInLotteryWinners] ADD [Notes] NVARCHAR(1000) NULL;
             END
             ";
 
@@ -2436,13 +2458,13 @@ app.MapGet("/api/lottery/export", async (string eventId, HttpContext ctx, IEvent
     var winners = await service.GetLotteryWinnersAsync(eventId);
 
     var sb = new System.Text.StringBuilder();
-    sb.AppendLine("序號,獎項名稱,貴賓姓名,所屬單位,職稱,桌號組別,員工卡號,中獎時間,狀態");
+    sb.AppendLine("序號,獎項名稱,貴賓姓名,所屬單位,職稱,桌號組別,員工卡號,備註說明,中獎時間,狀態");
 
     int idx = 1;
     foreach (var w in winners.OrderBy(w => w.PrizeName).ThenBy(w => w.WonAt))
     {
         var status = w.IsRevoked ? "已棄權/廢棄" : "有效中獎";
-        sb.AppendLine($"{idx++},\"{w.PrizeName}\",\"{w.GuestName}\",\"{w.Organization}\",\"{w.Title}\",\"{w.TableNo}\",\"{w.GuestId}\",\"{w.WonAt.ToTaiwanTimeString("yyyy/MM/dd HH:mm:ss")}\",\"{status}\"");
+        sb.AppendLine($"{idx++},\"{w.PrizeName}\",\"{w.GuestName}\",\"{w.Organization}\",\"{w.Title}\",\"{w.TableNo}\",\"{w.GuestId}\",\"{w.Notes}\",\"{w.WonAt.ToTaiwanTimeString("yyyy/MM/dd HH:mm:ss")}\",\"{status}\"");
     }
 
     var bytes = System.Text.Encoding.UTF8.GetPreamble().Concat(System.Text.Encoding.UTF8.GetBytes(sb.ToString())).ToArray();
