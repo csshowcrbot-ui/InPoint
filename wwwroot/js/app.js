@@ -1871,12 +1871,16 @@ class CheckInApp {
 
             // 4. Notes / Contact pill
             let notesHtml = '';
+            const pillList = [];
             if (gNotes && gNotes.trim()) {
                 const text = gNotes.trim();
-                const dispText = text.startsWith('聯絡人') ? text : `聯絡人：${text}`;
-                notesHtml = `<div class="guest-contact-pill">📌 ${this.escapeHtml(dispText)}</div>`;
-            } else if (gPhone && gPhone.trim()) {
-                notesHtml = `<div class="guest-contact-pill">📞 ${this.escapeHtml(gPhone.trim())}</div>`;
+                pillList.push(`<div class="guest-contact-pill" title="備註事項">📌 ${this.escapeHtml(text)}</div>`);
+            }
+            if (gPhone && gPhone.trim()) {
+                pillList.push(`<div class="guest-contact-pill" title="聯絡電話">📞 ${this.escapeHtml(gPhone.trim())}</div>`);
+            }
+            if (pillList.length > 0) {
+                notesHtml = `<div style="display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0;">${pillList.join('')}</div>`;
             }
 
             // 5. Check-in Timestamp & Status
@@ -2744,7 +2748,8 @@ class CheckInApp {
         const orgCol = headers.findIndex(h => /單位|部門|機構|服務單位|organization/i.test(h));
         const titleCol = headers.findIndex(h => /職稱|頭銜|title/i.test(h));
         const tableCol = headers.findIndex(h => /桌號|組別|席位|桌次|table/i.test(h));
-        const phoneCol = headers.findIndex(h => /電話|手機|聯絡人|phone/i.test(h));
+        const phoneCol = headers.findIndex(h => /電話|手機|聯絡電話|phone/i.test(h));
+        const notesCol = headers.findIndex(h => /備註|說明|附註|聯絡人|notes|note/i.test(h));
 
         this.parsedExcelRows = [];
         const tbody = document.getElementById('excelPreviewTbody');
@@ -2762,6 +2767,7 @@ class CheckInApp {
             const title = titleCol !== -1 ? String(row[titleCol] || '').trim() : '貴賓';
             const table = tableCol !== -1 ? String(row[tableCol] || '').trim() : '未排桌';
             const phone = phoneCol !== -1 ? String(row[phoneCol] || '').trim() : '';
+            const notes = notesCol !== -1 ? String(row[notesCol] || '').trim() : '';
 
             const rankWeight = this.calculateRankWeight(title);
 
@@ -2772,6 +2778,7 @@ class CheckInApp {
                 title,
                 tableNo: table,
                 phone,
+                notes,
                 rankWeight,
                 isCheckedIn: false
             };
@@ -2788,6 +2795,7 @@ class CheckInApp {
                     <td style="padding: 6px 10px; font-weight: 700;">${this.escapeHtml(name)}</td>
                     <td style="padding: 6px 10px;">${this.escapeHtml(table)}</td>
                     <td style="padding: 6px 10px;">${this.escapeHtml(phone)}</td>
+                    <td style="padding: 6px 10px; color: #475569;">${this.escapeHtml(notes)}</td>
                     <td style="padding: 6px 10px;">等級 ${rankWeight}</td>
                   </tr>
                 `;
