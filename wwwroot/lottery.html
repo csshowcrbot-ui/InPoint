@@ -502,14 +502,31 @@
 
     .winners-grid {
       display: flex;
+      flex-direction: column;
+      width: 100%;
+      max-width: 960px;
+      max-height: 460px;
+      overflow-y: hidden; /* 由JS平滑自動輪播，亦支援滑鼠懸停與手動滾動 */
+      overflow-x: hidden;
+      padding: 6px;
+      position: relative;
+      -webkit-mask-image: linear-gradient(to bottom, transparent 0%, var(--mask-fade-color) 12px, var(--mask-fade-color) calc(100% - 12px), transparent 100%);
+      mask-image: linear-gradient(to bottom, transparent 0%, var(--mask-fade-color) 12px, var(--mask-fade-color) calc(100% - 12px), transparent 100%);
+    }
+
+    .winners-scroll-track {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      width: 100%;
+    }
+
+    .winners-group {
+      display: flex;
       flex-wrap: wrap;
       justify-content: center;
       gap: 20px;
       width: 100%;
-      max-width: 960px;
-      max-height: 440px;
-      overflow-y: auto;
-      padding: 8px;
     }
 
     .winner-card {
@@ -1302,26 +1319,8 @@
 
       document.getElementById('revealPrizeTitle').textContent = `【${prizeName}】`;
 
-      const grid = document.getElementById('winnersGrid');
-      grid.innerHTML = '';
-
-      const isSingle = winners.length === 1;
-
-      winners.forEach(w => {
-        const rawName = w.guestName || w.GuestName || w.name || w.Name || '';
-        const card = document.createElement('div');
-        card.className = `winner-card ${isSingle ? 'single-mode' : ''}`;
-        card.innerHTML = `
-          <div class="winner-crown">👑</div>
-          <div class="winner-name" data-raw-name="${escapeHtml(rawName)}">${escapeHtml(maskName(rawName))}</div>
-          <div class="winner-org-title">
-            <span>${escapeHtml(w.organization || w.Organization || '')}</span>
-            <span>${escapeHtml(w.title || w.Title ? '· ' + (w.title || w.Title) : '')}</span>
-          </div>
-          <div class="winner-table-badge">席位：${escapeHtml(w.tableNo || w.TableNo || '現場安排')}</div>
-        `;
-        grid.appendChild(card);
-      });
+      // 渲染當次中獎卡片群組 (支援超出時雙軌無縫自動平滑輪播)
+      renderRevealedWinnersGrid(winners, isSingle);
 
       // Sound fanfare & Confetti Blast!
       playWinFanfare();
@@ -1362,6 +1361,7 @@
         clearInterval(rollingTimer);
         rollingTimer = null;
       }
+      stopWinnersAutoScroll();
       lastRevealedData = null;
       const grid = document.getElementById('winnersGrid');
       if (grid) grid.innerHTML = '';
@@ -1375,6 +1375,144 @@
       if (idlePrizeCard && (!idlePrizeName || !idlePrizeName.textContent.trim())) {
         idlePrizeCard.style.display = 'none';
       }
+    }
+
+    // =========================================================================
+    // 當次得獎名單渲染與無縫平滑自動輪播控制器 (Revealed Winners Grid Auto Scroll)
+    // =========================================================================
+    let winnersAutoScrollRaf = null;
+    let isWinnersMouseOver = false;
+    let isWinnersScrollPaused = false;
+    let winnersScrollPauseTimer = null;
+    let winnersLoopOffset = 0;
+
+    function buildWinnersCardsHtml(winners, isSingle) {
+      if (!winners || winners.length === 0) return '';
+      return winners.map(w => {
+        const rawName = w.guestName || w.GuestName || w.name || w.Name || '';
+        return `
+          <div class="winner-card ${isSingle ? 'single-mode' : ''}">
+            <div class="winner-crown">👑</div>
+            <div class="winner-name" data-raw-name="${escapeHtml(rawName)}">${escapeHtml(maskName(rawName))}</div>
+            <div class="winner-org-title">
+              <span>${escapeHtml(w.organization || w.Organization || '')}</span>
+              <span>${escapeHtml(w.title || w.Title ? '· ' + (w.title || w.Title) : '')}</span>
+            </div>
+            <div class="winner-table-badge">席位：${escapeHtml(w.tableNo || w.TableNo || '現場安排')}</div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderRevealedWinnersGrid(winners, isSingle) {
+      const grid = document.getElementById('winnersGrid');
+      if (!grid) return;
+
+      stopWinnersAutoScroll();
+      grid.scrollTop = 0;
+      winnersLoopOffset = 0;
+
+      const singleCardsHtml = buildWinnersCardsHtml(winners, isSingle);
+
+      // 若得獎人數少（<= 4 位），卡片數量不超過一頁，直接以標準響應式居中呈現
+      if (winners.length <= 4) {
+        grid.innerHTML = singleCardsHtml;
+        return;
+      }
+
+      // 超過單頁顯示數量（如一次抽取 5 位、10 位等）：啟用無縫雙軌自動滾動輪播
+      grid.innerHTML = `
+        <div class="winners-scroll-track" id="winnersTrack">
+          <div class="winners-group" id="winnersGroup1">${singleCardsHtml}</div>
+          <div class="winners-group" id="winnersGroup2" aria-hidden="true">${singleCardsHtml}</div>
+        </div>
+      `;
+
+      initWinnersAutoScroll();
+    }
+
+    function initWinnersAutoScroll() {
+      const container = document.getElementById('winnersGrid');
+      if (!container) return;
+
+      // 避免重複綁定事件
+      if (!container._hasScrollEvents) {
+        container._hasScrollEvents = true;
+        container.addEventListener('mouseenter', () => { isWinnersMouseOver = true; });
+        container.addEventListener('mouseleave', () => { setTimeout(() => { isWinnersMouseOver = false; }, 800); });
+        container.addEventListener('touchstart', () => { isWinnersMouseOver = true; }, { passive: true });
+        container.addEventListener('touchend', () => { setTimeout(() => { isWinnersMouseOver = false; }, 1200); });
+        container.addEventListener('scroll', () => {
+          if (isWinnersMouseOver) {
+            winnersLoopOffset = container.scrollTop;
+          }
+        }, { passive: true });
+      }
+
+      // 開獎當下先停留在頂部 3.5 秒讓全場清晰看清前排得獎者，隨後平滑啟動自動無縫巡航輪播
+      pauseWinnersAutoScrollTemporarily(3500);
+      startWinnersAutoScrollLoop();
+    }
+
+    function pauseWinnersAutoScrollTemporarily(ms = 3500) {
+      isWinnersScrollPaused = true;
+      if (winnersScrollPauseTimer) clearTimeout(winnersScrollPauseTimer);
+      winnersScrollPauseTimer = setTimeout(() => {
+        isWinnersScrollPaused = false;
+      }, ms);
+    }
+
+    function stopWinnersAutoScroll() {
+      if (winnersAutoScrollRaf) {
+        cancelAnimationFrame(winnersAutoScrollRaf);
+        winnersAutoScrollRaf = null;
+      }
+      if (winnersScrollPauseTimer) {
+        clearTimeout(winnersScrollPauseTimer);
+        winnersScrollPauseTimer = null;
+      }
+      isWinnersScrollPaused = false;
+      isWinnersMouseOver = false;
+      winnersLoopOffset = 0;
+    }
+
+    function startWinnersAutoScrollLoop() {
+      const container = document.getElementById('winnersGrid');
+      if (!container) return;
+
+      if (winnersAutoScrollRaf) {
+        cancelAnimationFrame(winnersAutoScrollRaf);
+        winnersAutoScrollRaf = null;
+      }
+
+      let lastTime = performance.now();
+      const scrollSpeed = 24; // 每秒平滑推進 24 像素，清晰舒適、流暢自然
+
+      function scrollStep(now) {
+        const delta = Math.min((now - lastTime) / 1000, 0.1);
+        lastTime = now;
+
+        if (!isWinnersMouseOver && !isWinnersScrollPaused && container) {
+          const group2 = document.getElementById('winnersGroup2');
+          if (group2 && group2.style.display !== 'none') {
+            const loopHeight = group2.offsetTop;
+            if (loopHeight > 0) {
+              winnersLoopOffset += scrollSpeed * delta;
+
+              // 達到無縫銜接點：透過模數運算精準映射回循環起點，實現像素級完美接續
+              if (winnersLoopOffset >= loopHeight) {
+                winnersLoopOffset = winnersLoopOffset % loopHeight;
+              }
+
+              container.scrollTop = winnersLoopOffset;
+            }
+          }
+        }
+
+        winnersAutoScrollRaf = requestAnimationFrame(scrollStep);
+      }
+
+      winnersAutoScrollRaf = requestAnimationFrame(scrollStep);
     }
 
     function checkWinnersChanged(newList, oldList) {
