@@ -516,6 +516,74 @@
         grid-template-columns: repeat(2, 1fr);
       }
     }
+
+    /* 手機版專屬活動名稱小標籤（桌面大螢幕隱藏） */
+    .kiosk-mobile-event-name {
+      display: none;
+    }
+
+    /* 手機畫面純淨 QR Code 報到模式：僅顯示 QR Code 卡片，隱藏頂部工具列、右側統計看板與頁尾 */
+    @media (max-width: 768px) {
+      body {
+        min-height: 100dvh;
+        justify-content: center;
+      }
+      .kiosk-header,
+      .kiosk-live-board,
+      .kiosk-footer {
+        display: none !important;
+      }
+      .kiosk-main {
+        flex: 1;
+        padding: 16px;
+        gap: 0;
+        align-items: center;
+        justify-content: center;
+      }
+      .kiosk-qr-card {
+        max-width: 420px;
+        width: 100%;
+        padding: 24px 20px 22px;
+        border-radius: 24px;
+        justify-content: center;
+      }
+      .kiosk-mobile-event-name {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: #EDF7F1;
+        border: 1px solid #C6E6D4;
+        color: #134933;
+        font-size: 13px;
+        font-weight: 800;
+        padding: 4px 14px;
+        border-radius: 20px;
+        margin-bottom: 10px;
+        max-width: 100%;
+        box-sizing: border-box;
+      }
+      .kiosk-qr-card-header {
+        margin-bottom: 8px;
+      }
+      .kiosk-qr-card-header h2 {
+        font-size: 20px;
+      }
+      .kiosk-qr-card-header p {
+        font-size: 13px;
+        margin: 4px 0 0 0;
+      }
+      .kiosk-qr-viewport {
+        width: min(74vw, 300px);
+        height: min(74vw, 300px);
+        padding: 10px;
+        margin: 12px 0;
+      }
+      .kiosk-security-badge {
+        margin-top: 12px;
+        font-size: 11.5px;
+        padding: 7px 12px;
+      }
+    }
   </style>
 </head>
 <body>
@@ -547,6 +615,7 @@
     <!-- Left: 60-Second Dynamic Anti-Cheat QR Code -->
     <div class="kiosk-qr-card">
       <div class="kiosk-qr-card-header">
+        <div class="kiosk-mobile-event-name" id="kioskMobileEventName">現場自助報到</div>
         <h2><span>📱</span> 請掃描 QR Code 自助報到</h2>
         <p>請使用手機相機或 LINE 掃碼即可一秒完成簽到</p>
       </div>
@@ -774,6 +843,9 @@
       const headEl = document.getElementById('kioskMainHeading');
       if (headEl) headEl.textContent = `${ev.eventName} · 自助報到大螢幕`;
 
+      const mobileNameEl = document.getElementById('kioskMobileEventName');
+      if (mobileNameEl && ev.eventName) mobileNameEl.textContent = `📅 ${ev.eventName}`;
+
       const badgeNameEl = document.getElementById('kioskEventNameDisplay');
       if (badgeNameEl) {
         const dateStr = ev.eventDate ? new Date(ev.eventDate).toLocaleDateString('zh-TW', { year: 'numeric', month: 'numeric', day: 'numeric' }) : '';
@@ -901,6 +973,9 @@
       }
       if (feed.eventName && document.getElementById('kioskMainHeading')) {
         document.getElementById('kioskMainHeading').textContent = `${feed.eventName} · 自助報到大螢幕`;
+      }
+      if (feed.eventName && document.getElementById('kioskMobileEventName')) {
+        document.getElementById('kioskMobileEventName').textContent = `📅 ${feed.eventName}`;
       }
 
       const arrivals = feed.recentArrivals || [];
