@@ -41,9 +41,9 @@ const RANK_PRESETS = {
 function calculateRankWeightByRuleSet(title, rules) {
     title = (title || '').trim();
     if (!title) return 4;
-    
+
     const r = rules || (window.app && window.app.getCurrentEventRankRules ? window.app.getCurrentEventRankRules() : DEFAULT_RANK_RULES);
-    
+
     // 檢查 Rank 4 排除詞 (如: 照專，但若含督導則不排除)
     const r4List = Array.isArray(r.rank4Keywords) ? r.rank4Keywords : [];
     for (const kw of r4List) {
@@ -91,7 +91,7 @@ function getGuestRank(g, rules) {
 function isGuestCheckedIn(g) {
     if (!g) return false;
     return g.isCheckedIn === true || g.isCheckedIn === 'true' || g.isCheckedIn === 1 || g.isCheckedIn === '1' ||
-           g.IsCheckedIn === true || g.IsCheckedIn === 'true' || g.IsCheckedIn === 1 || g.IsCheckedIn === '1';
+        g.IsCheckedIn === true || g.IsCheckedIn === 'true' || g.IsCheckedIn === 1 || g.IsCheckedIn === '1';
 }
 
 class CheckInApp {
@@ -784,7 +784,7 @@ class CheckInApp {
                 try {
                     const cd = new Date(m.createdAt);
                     if (!isNaN(cd.getTime())) createdAtStr = cd.toLocaleDateString();
-                } catch (e) {}
+                } catch (e) { }
             }
 
             const upgradeBtn = m.planType === 'Trial'
@@ -1794,12 +1794,12 @@ class CheckInApp {
                 const notes = (g.notes || g.Notes || '').toLowerCase();
                 const phone = (g.phone || g.Phone || '');
                 return name.includes(this.searchQuery) ||
-                       guestId.includes(this.searchQuery) ||
-                       organization.includes(this.searchQuery) ||
-                       title.includes(this.searchQuery) ||
-                       tableNo.includes(this.searchQuery) ||
-                       notes.includes(this.searchQuery) ||
-                       phone.includes(this.searchQuery);
+                    guestId.includes(this.searchQuery) ||
+                    organization.includes(this.searchQuery) ||
+                    title.includes(this.searchQuery) ||
+                    tableNo.includes(this.searchQuery) ||
+                    notes.includes(this.searchQuery) ||
+                    phone.includes(this.searchQuery);
             });
         }
 
@@ -2076,7 +2076,7 @@ class CheckInApp {
 
         const isGuestCheckedIn = (g) => {
             return g.isCheckedIn === true || g.isCheckedIn === 'true' || g.isCheckedIn === 1 || g.isCheckedIn === '1' ||
-                   g.IsCheckedIn === true || g.IsCheckedIn === 'true' || g.IsCheckedIn === 1 || g.IsCheckedIn === '1';
+                g.IsCheckedIn === true || g.IsCheckedIn === 'true' || g.IsCheckedIn === 1 || g.IsCheckedIn === '1';
         };
 
         const allGuests = this.guests || [];
@@ -2150,7 +2150,7 @@ class CheckInApp {
                     const rank = getGuestRank(g);
                     const vipClass = rank === 1 ? 'vip1' : (rank === 2 ? 'vip2' : 'vip3');
                     const badgeText = rank === 1 ? '👑 院長/局長 (VIP-1)' : (rank === 2 ? '⭐ 副院長/民代 (VIP-2)' : '🎓 科部主任 (VIP-3)');
-                    
+
                     let timeFormatted = '已完成簽到';
                     if (g.checkedInAt) {
                         const d = this.parseDate(g.checkedInAt);
@@ -2426,7 +2426,7 @@ class CheckInApp {
     updateRankSettingsStatsDisplay(previewRules) {
         const rules = previewRules || this.getCurrentEventRankRules();
         let c1 = 0, c2 = 0, c3 = 0, c4 = 0;
-        
+
         for (const g of this.guests) {
             const r = getGuestRank(g, rules);
             if (r === 1) c1++;
@@ -2595,6 +2595,62 @@ class CheckInApp {
     }
 
     /**
+     * 一鍵全部報到：將本場次所有尚未報到貴賓一次標記為已完成報到
+     */
+    async handleCheckInAllGuests() {
+        if (!this.currentEventId) {
+            this.showToast('請先選擇或建立活動場次！', 'warning');
+            return;
+        }
+
+        const totalCount = (this.guests || []).length;
+        if (totalCount === 0) {
+            this.showToast('目前名冊尚無貴賓資料可供報到', 'info');
+            return;
+        }
+
+        const pendingCount = this.guests.filter(g => !g.isCheckedIn).length;
+        if (pendingCount === 0) {
+            this.showToast('✅ 本場次所有貴賓皆已完成報到！', 'info');
+            return;
+        }
+
+        const confirmed = confirm(
+            `確定要執行「一鍵全部報到」嗎？\n\n` +
+            `• 本場次總人數：${totalCount} 位\n` +
+            `• 尚未報到人數：${pendingCount} 位\n\n` +
+            `按下確定後，將一次把這 ${pendingCount} 位貴賓標記為「已完成報到」（已報到者將保留原報到時間）。`
+        );
+        if (!confirmed) return;
+
+        const btn = document.getElementById('btnCheckInAllGuests');
+        const originalHtml = btn ? btn.innerHTML : '';
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<span>⏳ 批次報到中...</span>';
+        }
+
+        try {
+            const user = window.apiService.currentUser;
+            const staffName = user
+                ? `${user.displayName || user.username} (一鍵全部報到)`
+                : '現場報到處 (一鍵全部報到)';
+
+            const res = await window.apiService.checkInAllGuests(this.currentEventId, staffName);
+            await this.loadGuestsAndStats();
+            if (window.soundManager) window.soundManager.playCheckInSuccess();
+            this.showToast(`🎉 已完成一鍵全部報到（共更新 ${res.updatedCount ?? pendingCount} 位貴賓）！`, 'success');
+        } catch (err) {
+            this.showToast(err.message || '一鍵全部報到失敗，請稍後再試', 'error');
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = originalHtml || '<span>⚡ 一鍵全部報到</span>';
+            }
+        }
+    }
+
+    /**
      * 儲存本場活動專屬職級權重規則
      */
     async handleSaveRankSettings(e) {
@@ -2632,7 +2688,7 @@ class CheckInApp {
             }
 
             const res = await window.apiService.updateRankRules(this.currentEventId, rankRulesJson, recalculate);
-            
+
             // 更新本地活動物件
             const ev = this.events.find(ev => ev.eventId === this.currentEventId);
             if (ev) {
@@ -3063,16 +3119,16 @@ class CheckInApp {
     }
 
     // Scanner (已取消相機掃描功能，保留空函式避免異常)
-    openScannerModal() {}
+    openScannerModal() { }
     closeScannerModal() { this.stopCamera(); }
-    async startCamera() {}
+    async startCamera() { }
     stopCamera() {
         if (this.videoStream) {
-            try { this.videoStream.getTracks().forEach(track => track.stop()); } catch (e) {}
+            try { this.videoStream.getTracks().forEach(track => track.stop()); } catch (e) { }
             this.videoStream = null;
         }
     }
-    simulateQuickScan() {}
+    simulateQuickScan() { }
 
     // AI Assistant
     setAiPrompt(prompt) {

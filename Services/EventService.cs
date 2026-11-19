@@ -27,6 +27,7 @@ public interface IEventService
     Task<bool> DeleteGuestAsync(string eventId, string guestId);
     Task<bool> ClearAllGuestsAsync(string eventId);
     Task<Guest?> ToggleCheckInAsync(string eventId, string guestId, bool? targetStatus, string staffName);
+    Task<int> CheckInAllGuestsAsync(string eventId, string staffName);
 
     // Members / Users
     Task<List<MemberDto>> GetMembersAsync();
@@ -626,6 +627,33 @@ public class InMemoryEventService : IEventService
             return Task.FromResult<Guest?>(guest);
         }
         return Task.FromResult<Guest?>(null);
+    }
+
+    public Task<int> CheckInAllGuestsAsync(string eventId, string staffName)
+    {
+        if (!_guests.TryGetValue(eventId, out var map))
+        {
+            return Task.FromResult(0);
+        }
+
+        int updatedCount = 0;
+        var now = DateTime.UtcNow;
+        foreach (var guest in map.Values)
+        {
+            if (!guest.IsCheckedIn)
+            {
+                guest.IsCheckedIn = true;
+                guest.CheckedInAt = now;
+                guest.CheckedInBy = staffName;
+                updatedCount++;
+            }
+        }
+
+        if (updatedCount > 0)
+        {
+            SaveDataToDisk();
+        }
+        return Task.FromResult(updatedCount);
     }
 
     // --- Users / Members ---

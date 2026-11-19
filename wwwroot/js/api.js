@@ -607,6 +607,19 @@ class ApiService {
         return data;
     }
 
+    async checkInAllGuests(eventId, staffName) {
+        const res = await fetch(`${this.apiBase}api/events/${encodeURIComponent(eventId)}/guests/check-in-all`, {
+            method: 'POST',
+            cache: 'no-store',
+            headers: this.getAuthHeaders({ 'Content-Type': 'application/json' }),
+            body: JSON.stringify({ staffName: staffName || '現場報到處 (一鍵全部報到)' })
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.message || '一鍵全部報到失敗');
+        this.broadcast('guestAdded', { eventId });
+        return data;
+    }
+
     getExportUrl(eventId) {
         const tokenParam = this.token ? `token=${encodeURIComponent(this.token)}&` : '';
         return `${this.apiBase}api/events/${encodeURIComponent(eventId)}/export?${tokenParam}_t=${Date.now()}`;

@@ -355,6 +355,27 @@ public class SqlEventService : IEventService
         return guest;
     }
 
+    public async Task<int> CheckInAllGuestsAsync(string eventId, string staffName)
+    {
+        await using var db = await _dbFactory.CreateDbContextAsync();
+        var pendingGuests = await db.Guests
+            .Where(g => g.EventId == eventId && !g.IsCheckedIn)
+            .ToListAsync();
+
+        if (pendingGuests.Count == 0) return 0;
+
+        var now = DateTime.UtcNow;
+        foreach (var guest in pendingGuests)
+        {
+            guest.IsCheckedIn = true;
+            guest.CheckedInAt = now;
+            guest.CheckedInBy = staffName;
+        }
+
+        await db.SaveChangesAsync();
+        return pendingGuests.Count;
+    }
+
     // --- Users / Members ---
 
     public async Task<List<MemberDto>> GetMembersAsync()

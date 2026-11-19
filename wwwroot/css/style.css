@@ -852,6 +852,42 @@ body {
   transform: translateY(0);
 }
 
+/* 4-1. 一鍵全部報到按鈕 (Check-in All Button) */
+.btn-checkin-all {
+  background: linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%);
+  border: 1.5px solid #93C5FD;
+  color: #1D4ED8;
+  font-weight: 700;
+  font-size: 13px;
+  padding: 8px 16px;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.14);
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+}
+
+.btn-checkin-all:hover {
+  background: linear-gradient(135deg, #DBEAFE 0%, #BFDBFE 100%);
+  border-color: #60A5FA;
+  color: #1E40AF;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(59, 130, 246, 0.24);
+}
+
+.btn-checkin-all:active {
+  transform: translateY(0);
+}
+
+.btn-checkin-all:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
 /* 5. 現場新增貴賓按鈕 (Add Guest Button) */
 .btn-add-guest {
   background: linear-gradient(135deg, #1A5E42 0%, #2E7D32 100%);

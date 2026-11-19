@@ -2018,6 +2018,28 @@ app.MapPut("/api/events/{id}/guests/{gId}/lottery-eligible", async (string id, s
     return Results.Ok(new { success = true, guest = g });
 });
 
+// Check-in All Pending Guests (一鍵全部報到)
+app.MapPost("/api/events/{id}/guests/check-in-all", async (string id, CheckInToggleRequest? req, HttpContext ctx, IEventService service, IHubContext<CheckInHub> hubContext) =>
+{
+    var staffName = !string.IsNullOrWhiteSpace(req?.StaffName)
+        ? req!.StaffName!
+        : "現場報到處 (一鍵全部報到)";
+
+    var updatedCount = await service.CheckInAllGuestsAsync(id, staffName);
+    var stats = await service.GetEventStatsAsync(id);
+    var allGuests = await service.GetGuestsAsync(id);
+
+    await hubContext.Clients.Group(id).SendAsync("OnGuestsBatchAdded", allGuests);
+    await hubContext.Clients.All.SendAsync("OnStatsUpdated", stats);
+
+    return Results.Ok(new
+    {
+        success = true,
+        updatedCount,
+        stats
+    });
+});
+
 
 // --- 5. Export CSV & Excel ---
 
