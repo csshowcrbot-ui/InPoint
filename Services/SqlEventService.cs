@@ -149,6 +149,7 @@ public class SqlEventService : IEventService
                 QrCodeHash = $"SC-{newId.Replace("event_", "")}-{g.GuestId}",
                 Phone = g.Phone,
                 Notes = g.Notes,
+                IsLotteryEligible = g.IsLotteryEligible,
                 CreatedAt = DateTime.UtcNow
             }).ToList();
 
@@ -301,6 +302,7 @@ public class SqlEventService : IEventService
         existing.TableNo = guest.TableNo;
         existing.Phone = guest.Phone;
         existing.Notes = guest.Notes;
+        existing.IsLotteryEligible = guest.IsLotteryEligible;
 
         await db.SaveChangesAsync();
         return true;
@@ -531,11 +533,12 @@ public class SqlEventService : IEventService
         var sb = new System.Text.StringBuilder();
         sb.AppendLine($"# 活動報到名冊 - {eventName}");
         sb.AppendLine($"# 匯出時間：{TaiwanTime.Now:yyyy/MM/dd HH:mm:ss}");
-        sb.AppendLine("貴賓編號,姓名,服務單位,職稱,職級權重,桌次/座位,報到狀態,報到時間,經手人員,專屬QR碼,電話,備註");
+        sb.AppendLine("貴賓編號,姓名,服務單位,職稱,職級權重,桌次/座位,報到狀態,抽獎資格,報到時間,經手人員,專屬QR碼,電話,備註");
 
         foreach (var g in guests)
         {
             var checkInStatus = g.IsCheckedIn ? "已報到" : "未報到";
+            var lotteryStatus = g.IsLotteryEligible ? "具抽獎資格" : "不參與抽獎";
             var checkInTime = g.CheckedInAt.HasValue ? g.CheckedInAt.ToTaiwanTimeString("yyyy/MM/dd HH:mm:ss") : "";
             var rankDesc = g.RankWeight switch
             {
@@ -545,7 +548,7 @@ public class SqlEventService : IEventService
                 _ => "4-一般貴賓"
             };
 
-            sb.AppendLine($"\"{g.GuestId}\",\"{g.Name}\",\"{g.Organization}\",\"{g.Title}\",\"{rankDesc}\",\"{g.TableNo}\",\"{checkInStatus}\",\"{checkInTime}\",\"{g.CheckedInBy ?? ""}\",\"{g.QrCodeHash}\",\"{g.Phone ?? ""}\",\"{g.Notes ?? ""}\"");
+            sb.AppendLine($"\"{g.GuestId}\",\"{g.Name}\",\"{g.Organization}\",\"{g.Title}\",\"{rankDesc}\",\"{g.TableNo}\",\"{checkInStatus}\",\"{lotteryStatus}\",\"{checkInTime}\",\"{g.CheckedInBy ?? ""}\",\"{g.QrCodeHash}\",\"{g.Phone ?? ""}\",\"{g.Notes ?? ""}\"");
         }
 
         return sb.ToString();
@@ -765,8 +768,8 @@ public class SqlEventService : IEventService
     public async Task<List<Guest>> GetEligibleLotteryGuestsAsync(string eventId, bool excludePreviousWinners = true)
     {
         await using var db = await _dbFactory.CreateDbContextAsync();
-        // 嚴格只針對現場已完成報到名單
-        var query = db.Guests.Where(g => g.EventId == eventId && g.IsCheckedIn);
+        // 嚴格只針對現場已完成報到且具備抽獎資格之名單
+        var query = db.Guests.Where(g => g.EventId == eventId && g.IsCheckedIn && g.IsLotteryEligible);
 
         if (excludePreviousWinners)
         {

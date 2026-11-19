@@ -38,6 +38,10 @@ public class Guest
     public string QrCodeHash { get; set; } = string.Empty;
     public string? Phone { get; set; }
     public string? Notes { get; set; }
+    /// <summary>
+    /// 是否具備現場抽獎資格（預設 true；設為 false 時即使已報到也不會納入抽獎名單）
+    /// </summary>
+    public bool IsLotteryEligible { get; set; } = true;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }
 
@@ -268,6 +272,11 @@ public class UpdateRankRulesRequest
 public class UpdateGuestRankRequest
 {
     public int RankWeight { get; set; } = 3;
+}
+
+public class UpdateGuestLotteryEligibleRequest
+{
+    public bool IsLotteryEligible { get; set; } = true;
 }
 
 // =========================================================================

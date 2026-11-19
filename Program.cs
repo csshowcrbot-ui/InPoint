@@ -104,10 +104,13 @@ if (useSql)
                         END IF;
                     END IF;
 
-                    -- 檢查並為 checkInGuests 新增 CreatedAt 欄位
+                    -- 檢查並為 checkInGuests 新增 CreatedAt 與 IsLotteryEligible 欄位
                     IF EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'checkInGuests') THEN
                         IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name = 'checkInGuests' AND column_name = 'CreatedAt') THEN
                             ALTER TABLE ""checkInGuests"" ADD COLUMN ""CreatedAt"" TIMESTAMP NOT NULL DEFAULT NOW();
+                        END IF;
+                        IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name = 'checkInGuests' AND column_name = 'IsLotteryEligible') THEN
+                            ALTER TABLE ""checkInGuests"" ADD COLUMN ""IsLotteryEligible"" BOOLEAN NOT NULL DEFAULT TRUE;
                         END IF;
                     END IF;
                     IF EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'checkinguests') THEN
@@ -116,6 +119,12 @@ if (useSql)
                         END IF;
                         IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name = 'checkinguests' AND column_name = 'CreatedAt') THEN
                             ALTER TABLE checkinguests ADD COLUMN ""CreatedAt"" TIMESTAMP NOT NULL DEFAULT NOW();
+                        END IF;
+                        IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name = 'checkinguests' AND column_name = 'islotteryeligible') THEN
+                            ALTER TABLE checkinguests ADD COLUMN islotteryeligible BOOLEAN NOT NULL DEFAULT TRUE;
+                        END IF;
+                        IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name = 'checkinguests' AND column_name = 'IsLotteryEligible') THEN
+                            ALTER TABLE checkinguests ADD COLUMN ""IsLotteryEligible"" BOOLEAN NOT NULL DEFAULT TRUE;
                         END IF;
                     END IF;
                     -- 檢查並為 checkInEvents 新增抽獎欄位
@@ -193,6 +202,7 @@ if (useSql)
 
                 -- 額外確保 checkInGuests 與 checkInLotteryWinners 欄位熱更新 (原生語法雙重防護)
                 ALTER TABLE IF EXISTS ""checkInGuests"" ADD COLUMN IF NOT EXISTS ""CreatedAt"" TIMESTAMP NOT NULL DEFAULT NOW();
+                ALTER TABLE IF EXISTS ""checkInGuests"" ADD COLUMN IF NOT EXISTS ""IsLotteryEligible"" BOOLEAN NOT NULL DEFAULT TRUE;
                 ALTER TABLE IF EXISTS ""checkInLotteryWinners"" ADD COLUMN IF NOT EXISTS ""Notes"" VARCHAR(1000) NULL;
                 ";
                 using var alterCmd = new NpgsqlCommand(alterPgSql, pgConn);
@@ -297,6 +307,11 @@ if (useSql)
             IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('checkInLotteryWinners') AND name = 'Notes')
             BEGIN
                 ALTER TABLE [checkInLotteryWinners] ADD [Notes] NVARCHAR(1000) NULL;
+            END
+
+            IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('checkInGuests') AND name = 'IsLotteryEligible')
+            BEGIN
+                ALTER TABLE [checkInGuests] ADD [IsLotteryEligible] BIT NOT NULL DEFAULT 1;
             END
             ";
 
@@ -1934,6 +1949,59 @@ app.MapPut("/api/events/{id}/guests/{gId}/rank", async (string id, string gId, U
     }
 
     g.RankWeight = req.RankWeight;
+    await service.UpdateGuestAsync(g);
+
+    var stats = await service.GetEventStatsAsync(id);
+    await hubContext.Clients.Group(id).SendAsync("OnGuestCheckInChanged", new
+    {
+        EventId = id,
+        Guest = g,
+        UpdatedBy = "名冊管理人員",
+        Timestamp = TaiwanTime.Now,
+        Stats = stats
+    });
+    await hubContext.Clients.All.SendAsync("OnStatsUpdated", stats);
+
+    return Results.Ok(new { success = true, guest = g });
+});
+
+// Update Single Guest Lottery Eligibility (修改單一貴賓是否具備抽獎資格)
+app.MapPost("/api/events/{id}/guests/{gId}/lottery-eligible", async (string id, string gId, UpdateGuestLotteryEligibleRequest req, HttpContext ctx, IEventService service, IHubContext<CheckInHub> hubContext) =>
+{
+    var guests = await service.GetGuestsAsync(id);
+    var g = guests.FirstOrDefault(x => x.GuestId == gId);
+    if (g == null)
+    {
+        return Results.NotFound(new { success = false, message = "找不到該貴賓" });
+    }
+
+    g.IsLotteryEligible = req.IsLotteryEligible;
+    await service.UpdateGuestAsync(g);
+
+    var stats = await service.GetEventStatsAsync(id);
+    await hubContext.Clients.Group(id).SendAsync("OnGuestCheckInChanged", new
+    {
+        EventId = id,
+        Guest = g,
+        UpdatedBy = "名冊管理人員",
+        Timestamp = TaiwanTime.Now,
+        Stats = stats
+    });
+    await hubContext.Clients.All.SendAsync("OnStatsUpdated", stats);
+
+    return Results.Ok(new { success = true, guest = g });
+});
+
+app.MapPut("/api/events/{id}/guests/{gId}/lottery-eligible", async (string id, string gId, UpdateGuestLotteryEligibleRequest req, HttpContext ctx, IEventService service, IHubContext<CheckInHub> hubContext) =>
+{
+    var guests = await service.GetGuestsAsync(id);
+    var g = guests.FirstOrDefault(x => x.GuestId == gId);
+    if (g == null)
+    {
+        return Results.NotFound(new { success = false, message = "找不到該貴賓" });
+    }
+
+    g.IsLotteryEligible = req.IsLotteryEligible;
     await service.UpdateGuestAsync(g);
 
     var stats = await service.GetEventStatsAsync(id);

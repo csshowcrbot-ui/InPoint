@@ -271,21 +271,25 @@ class CheckInApp {
         window.apiService.on('checkInChanged', (data) => {
             if (data.eventId === this.currentEventId && data.guest) {
                 const index = this.guests.findIndex(g => g.guestId === data.guest.guestId);
+                const prevChecked = index !== -1 ? !!this.guests[index].isCheckedIn : null;
                 if (index !== -1) {
                     this.guests[index] = data.guest;
                 } else {
                     this.guests.push(data.guest);
                 }
 
-                if (data.guest.isCheckedIn) {
-                    if (data.guest.rankWeight <= 2) {
-                        if (window.soundManager) window.soundManager.playVipFanfare();
-                        this.showVipArrivalToast(data.guest);
-                    } else {
-                        if (window.soundManager) window.soundManager.playCheckInSuccess();
+                // 僅在報到狀態確實改變時才播放音效與 VIP 蒞臨提示（避免修改職級或抽獎資格時誤觸發）
+                if (prevChecked === null || prevChecked !== !!data.guest.isCheckedIn) {
+                    if (data.guest.isCheckedIn) {
+                        if (data.guest.rankWeight <= 2) {
+                            if (window.soundManager) window.soundManager.playVipFanfare();
+                            this.showVipArrivalToast(data.guest);
+                        } else {
+                            if (window.soundManager) window.soundManager.playCheckInSuccess();
+                        }
+                    } else if (prevChecked === true) {
+                        if (window.soundManager) window.soundManager.playUndoSound();
                     }
-                } else {
-                    if (window.soundManager) window.soundManager.playUndoSound();
                 }
 
                 this.updateStatsLocally();
@@ -1908,6 +1912,11 @@ class CheckInApp {
                 ? `<button type="button" class="btn-checkin-toggle is-checked" onclick="app.toggleCheckIn('${gId}', false)" title="點擊可撤回報到">✓ 已報到 (點擊撤回)</button>`
                 : `<button type="button" class="btn-checkin-toggle is-pending" onclick="app.toggleCheckIn('${gId}', true)" title="點擊進行一鍵報到">⚡ 點擊報到</button>`;
 
+            const isLotteryEligible = (g.isLotteryEligible !== false && g.IsLotteryEligible !== false);
+            const lotteryBtnHtml = isLotteryEligible
+                ? `<button type="button" class="btn-card-lottery is-eligible" onclick="app.toggleGuestLotteryEligible('${gId}', false)" title="目前具備現場抽獎資格（點擊可改為不參與抽獎）">🎁 抽獎</button>`
+                : `<button type="button" class="btn-card-lottery is-ineligible" onclick="app.toggleGuestLotteryEligible('${gId}', true)" title="目前不參與現場抽獎（點擊可恢復抽獎資格）">🚫 免抽</button>`;
+
             const deleteBtnHtml = `<button type="button" class="btn-card-delete" onclick="app.showDeleteGuestModal('${gId}', '${this.escapeHtml(this.maskName(gName))}')" title="刪除此貴賓">🗑️</button>`;
 
             return `
@@ -1931,6 +1940,7 @@ class CheckInApp {
 
                 <div class="guest-card-actions">
                   ${checkInBtnHtml}
+                  ${lotteryBtnHtml}
                   ${deleteBtnHtml}
                 </div>
               </div>
@@ -2554,6 +2564,37 @@ class CheckInApp {
     }
 
     /**
+     * 快速切換單一貴賓是否具備現場抽獎資格
+     */
+    async toggleGuestLotteryEligible(guestId, targetEligible) {
+        if (!this.currentEventId || !guestId) return;
+        const isEligible = !!targetEligible;
+
+        try {
+            await window.apiService.updateGuestLotteryEligible(this.currentEventId, guestId, isEligible);
+            const target = this.guests.find(g => (g.guestId || g.GuestId || g.id) === guestId);
+            const displayName = target ? this.maskName(target.name || target.Name || guestId) : guestId;
+            if (target) {
+                target.isLotteryEligible = isEligible;
+                target.IsLotteryEligible = isEligible;
+                this.renderAllViews();
+            }
+            // 若目前在抽獎控制面板，同步更新可抽獎人數
+            if (typeof this.loadLotteryStatus === 'function' && this.currentTab === 'lottery') {
+                this.loadLotteryStatus();
+            }
+            this.showToast(
+                isEligible
+                    ? `🎁 已設定【${displayName}】具備現場抽獎資格`
+                    : `🚫 已設定【${displayName}】不參與現場抽獎`,
+                isEligible ? 'success' : 'info'
+            );
+        } catch (err) {
+            this.showToast(err.message || '更新抽獎資格失敗，請稍後再試', 'error');
+        }
+    }
+
+    /**
      * 儲存本場活動專屬職級權重規則
      */
     async handleSaveRankSettings(e) {
@@ -2750,6 +2791,7 @@ class CheckInApp {
         const tableCol = headers.findIndex(h => /桌號|組別|席位|桌次|table/i.test(h));
         const phoneCol = headers.findIndex(h => /電話|手機|聯絡電話|phone/i.test(h));
         const notesCol = headers.findIndex(h => /備註|說明|附註|聯絡人|notes|note/i.test(h));
+        const lotteryCol = headers.findIndex(h => /抽獎資格|是否抽獎|抽獎|lottery/i.test(h));
 
         this.parsedExcelRows = [];
         const tbody = document.getElementById('excelPreviewTbody');
@@ -2768,6 +2810,13 @@ class CheckInApp {
             const table = tableCol !== -1 ? String(row[tableCol] || '').trim() : '未排桌';
             const phone = phoneCol !== -1 ? String(row[phoneCol] || '').trim() : '';
             const notes = notesCol !== -1 ? String(row[notesCol] || '').trim() : '';
+            let isLotteryEligible = true;
+            if (lotteryCol !== -1) {
+                const rawLottery = String(row[lotteryCol] || '').trim().toLowerCase();
+                if (rawLottery && /^(否|無|不|免|不參與|不參加|不具|0|false|no|n)/i.test(rawLottery)) {
+                    isLotteryEligible = false;
+                }
+            }
 
             const rankWeight = this.calculateRankWeight(title);
 
@@ -2779,6 +2828,7 @@ class CheckInApp {
                 tableNo: table,
                 phone,
                 notes,
+                isLotteryEligible,
                 rankWeight,
                 isCheckedIn: false
             };
@@ -2851,6 +2901,8 @@ class CheckInApp {
         if (modal) modal.classList.add('active');
         const defaultChoice = document.getElementById('choiceCheckInFalse');
         if (defaultChoice) defaultChoice.checked = true;
+        const lotteryChk = document.getElementById('addGuestLotteryEligible');
+        if (lotteryChk) lotteryChk.checked = true;
         setTimeout(() => {
             document.getElementById('addGuestName')?.focus();
         }, 100);
@@ -2863,6 +2915,8 @@ class CheckInApp {
         if (form) form.reset();
         const defaultChoice = document.getElementById('choiceCheckInFalse');
         if (defaultChoice) defaultChoice.checked = true;
+        const lotteryChk = document.getElementById('addGuestLotteryEligible');
+        if (lotteryChk) lotteryChk.checked = true;
     }
 
     async submitNewGuest(checkInNow = null) {
@@ -2896,6 +2950,7 @@ class CheckInApp {
         const tableNo = document.getElementById('addGuestTableNo')?.value.trim();
         const phone = document.getElementById('addGuestPhone')?.value.trim();
         const notes = document.getElementById('addGuestNotes')?.value.trim();
+        const isLotteryEligible = document.getElementById('addGuestLotteryEligible')?.checked ?? true;
 
         if (!name) {
             alert('請輸入貴賓姓名！');
@@ -2921,6 +2976,7 @@ class CheckInApp {
                 tableNo: tableNo || '未排桌',
                 phone,
                 notes,
+                isLotteryEligible,
                 rankWeight,
                 isCheckedIn: isCheckedIn,
                 checkedInBy: isCheckedIn ? staff : null

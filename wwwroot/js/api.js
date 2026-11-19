@@ -594,6 +594,19 @@ class ApiService {
         return data;
     }
 
+    async updateGuestLotteryEligible(eventId, guestId, isLotteryEligible) {
+        const res = await fetch(`${this.apiBase}api/events/${encodeURIComponent(eventId)}/guests/${encodeURIComponent(guestId)}/lottery-eligible`, {
+            method: 'POST',
+            cache: 'no-store',
+            headers: this.getAuthHeaders({ 'Content-Type': 'application/json' }),
+            body: JSON.stringify({ isLotteryEligible: !!isLotteryEligible })
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.message || '更新抽獎資格失敗');
+        this.broadcast('checkInChanged', { eventId, guestId, guest: data.guest });
+        return data;
+    }
+
     getExportUrl(eventId) {
         const tokenParam = this.token ? `token=${encodeURIComponent(this.token)}&` : '';
         return `${this.apiBase}api/events/${encodeURIComponent(eventId)}/export?${tokenParam}_t=${Date.now()}`;

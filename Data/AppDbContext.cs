@@ -48,6 +48,7 @@ public class AppDbContext : DbContext
             entity.Property(g => g.Phone).HasMaxLength(50);
             entity.Property(g => g.CheckedInBy).HasMaxLength(100);
             entity.Property(g => g.Notes).HasMaxLength(1000);
+            entity.Property(g => g.IsLotteryEligible).HasDefaultValue(true);
 
             entity.HasIndex(g => g.EventId);
             entity.HasIndex(g => g.QrCodeHash);
